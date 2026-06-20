@@ -4,9 +4,10 @@
 
 import { Canvas, useFrame } from "@react-three/fiber";
 import { useRef, useMemo } from "react";
+import type { Points } from "three";
 
 function Particles() {
-  const ref = useRef<THREE.Points>(null);
+  const ref = useRef<Points>(null);
 
   useFrame((_state, delta) => {
     if (ref.current) {
