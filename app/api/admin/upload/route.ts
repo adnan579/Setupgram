@@ -1,7 +1,7 @@
 /** @format */
 
 import { NextResponse } from "next/server";
-import { v2 as cloudinary } from "cloudinary";
+import { v2 as cloudinary, type UploadApiOptions } from "cloudinary";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -23,15 +23,21 @@ export async function POST(request: Request) {
     const type = (formData.get("type") as string) || "image"; // "image" | "video"
 
     if (!file) {
-      return NextResponse.json({ success: false, message: "No file provided." }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "No file provided." },
+        { status: 400 },
+      );
     }
 
     // Size limits: images 10MB, videos 50MB
     const maxSize = type === "video" ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
     if (file.size > maxSize) {
       return NextResponse.json(
-        { success: false, message: `File too large. Max ${type === "video" ? "50MB" : "10MB"}.` },
-        { status: 400 }
+        {
+          success: false,
+          message: `File too large. Max ${type === "video" ? "50MB" : "10MB"}.`,
+        },
+        { status: 400 },
       );
     }
 
@@ -41,7 +47,7 @@ export async function POST(request: Request) {
     const base64 = buffer.toString("base64");
     const dataUri = `data:${file.type};base64,${base64}`;
 
-    const uploadOptions: Parameters<typeof cloudinary.uploader.upload>[1] = {
+    const uploadOptions: UploadApiOptions = {
       folder: "setupgram/blog",
       resource_type: type === "video" ? "video" : "image",
       // Auto quality + format for images
@@ -71,7 +77,10 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Cloudinary upload error:", error);
-    return NextResponse.json({ success: false, message: "Upload failed. Please try again." }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: "Upload failed. Please try again." },
+      { status: 500 },
+    );
   }
 }
 
@@ -79,7 +88,10 @@ export async function DELETE(request: Request) {
   try {
     const { publicId, type } = await request.json();
     if (!publicId) {
-      return NextResponse.json({ success: false, message: "No publicId provided." }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "No publicId provided." },
+        { status: 400 },
+      );
     }
     await cloudinary.uploader.destroy(publicId, {
       resource_type: type === "video" ? "video" : "image",
@@ -87,6 +99,9 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Cloudinary delete error:", error);
-    return NextResponse.json({ success: false, message: "Delete failed." }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: "Delete failed." },
+      { status: 500 },
+    );
   }
 }
