@@ -1,7 +1,7 @@
 /** @format */
 
 import { NextResponse } from "next/server";
-import { v2 as cloudinary, type UploadApiOptions } from "cloudinary";
+import { v2 as cloudinary } from "cloudinary";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -10,11 +10,7 @@ cloudinary.config({
 });
 
 export const runtime = "nodejs";
-
-// Max 50MB upload
-export const config = {
-  api: { bodyParser: false },
-};
+export const maxDuration = 60; // allow up to 60s for large video uploads
 
 export async function POST(request: Request) {
   try {
@@ -47,7 +43,8 @@ export async function POST(request: Request) {
     const base64 = buffer.toString("base64");
     const dataUri = `data:${file.type};base64,${base64}`;
 
-    const uploadOptions: UploadApiOptions = {
+    // Use a loose type for upload options to avoid strict callback-type inference
+    const uploadOptions: any = {
       folder: "setupgram/blog",
       resource_type: type === "video" ? "video" : "image",
       // Auto quality + format for images
