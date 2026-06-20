@@ -7,6 +7,7 @@ import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";
 import ThreeBackground from "../components/ThreeBackground";
 import Bizzua from "../components/Bizzua";
+import { Analytics } from "@vercel/analytics/next";
 
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
 const spaceGrotesk = Space_Grotesk({
@@ -56,6 +57,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/* Bizzua AI Assistant — shown on all public pages */}
         <Bizzua />
+
+        {/* Vercel Web Analytics */}
+        <Analytics />
       </body>
     </html>
   );
