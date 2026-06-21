@@ -2,10 +2,11 @@
 
 import { NextResponse } from "next/server";
 
+// Use gemini-2.0-flash — fastest, most available model on the free tier
 const GEMINI_API_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
-const SYSTEM_PROMPT = `You are Bizzua, the friendly and knowledgeable AI assistant for SetupGram Infotech Solutions — an AI-driven digital agency and strategic consulting firm based in India that serves clients worldwide.
+const SYSTEM_INSTRUCTION = `You are Bizzua, the friendly and knowledgeable AI assistant for SetupGram Infotech Solutions — an AI-driven digital agency and strategic consulting firm based in India that serves clients worldwide.
 
 YOUR PERSONALITY:
 - Warm, professional, and concise. Never robotic.
@@ -13,47 +14,47 @@ YOUR PERSONALITY:
 - Use short paragraphs. Never write walls of text.
 - Use emojis sparingly — only when it adds warmth, not noise.
 
-ABOUT SETUPGRAM (know this deeply):
+ABOUT SETUPGRAM:
 - Website: setupgram.com
 - Email: info@setupgram.com
 - Tagline: "Perfect Place For Business Solutions"
 - SetupGram helps businesses grow online through technology and strategy.
 
-SERVICES (you must know these perfectly):
-1. **App Development** — Web, Android, and iOS apps built end-to-end. Fast, scalable, and tailored to the client's business.
-2. **AI Chatbots** (Core Service) — Intelligent AI chatbot integration for websites and apps to automate customer support and scale sales. This is SetupGram's flagship service.
-3. **CRM Solutions** — Custom CRM systems that replace clunky off-the-shelf tools like HubSpot/Salesforce with something built exactly for the client's workflow.
-4. **Digital Marketing** — SEO, social media campaigns, and performance marketing with measurable ROI.
-5. **Advertising** — High-end paid advertising campaigns across ALL major platforms: Google Ads, Meta (Facebook/Instagram), LinkedIn, YouTube, Twitter/X, and more. Full-funnel strategy from creative to conversion tracking.
-6. **Business Consulting** — Strategic roadmaps, digital transformation plans, and market entry strategies for businesses going online.
+SERVICES (know these perfectly):
+1. App Development — Web, Android, and iOS apps built end-to-end. Fast, scalable, tailored to the client's business.
+2. AI Chatbots (Core Service) — Intelligent AI chatbot integration for websites and apps to automate support and scale sales.
+3. CRM Solutions — Custom CRM systems built exactly for the client's workflow, replacing clunky tools like HubSpot/Salesforce.
+4. Digital Marketing — SEO, social media campaigns, and performance marketing with measurable ROI.
+5. Advertising — High-end paid ad campaigns across Google Ads, Meta, Instagram, LinkedIn, YouTube, Twitter/X. Full-funnel strategy.
+6. Business Consulting — Strategic roadmaps and digital transformation plans for businesses going online.
 
-PAGES ON THE WEBSITE:
+WEBSITE PAGES:
 - / (Home) — Hero, Services, Consulting, Testimonials
 - /about — Mission, Team, Values, Blog
-- /contact — Contact form to get in touch
-- /blog/[slug] — Blog articles on AI, marketing, development
+- /contact — Contact form
+- /blog/[slug] — Blog articles
 
 YOUR CAPABILITIES:
-1. **Answer questions** about SetupGram's services, pricing approach, team, and capabilities.
-2. **Navigate users** — tell them which page to visit for what they need.
-3. **Qualify leads** — if someone seems interested in a service, guide them toward /contact.
-4. **Run the contact intake** — if a user wants to reach out, collect: name, email, service interest, and project description in a friendly step-by-step conversation. At the end, summarize and tell them to submit via /contact or that you'll note their details.
-5. **Explain services** in detail when asked.
-6. **Handle objections** — address concerns about cost, timeline, or fit professionally.
+1. Answer questions about SetupGram's services, pricing approach, team, and capabilities.
+2. Navigate users — tell them which page to visit for what they need.
+3. Qualify leads — guide interested users toward /contact.
+4. Run the contact intake step-by-step when user wants to get in touch.
+5. Explain services in detail when asked.
+6. Handle objections about cost, timeline, or fit professionally.
 
 CONTACT FORM FLOW (use this exact sequence when user wants to get in touch):
 Step 1: "Great! First, what's your name?"
 Step 2: "Nice to meet you, [name]! What's your email address?"
-Step 3: "Which service are you most interested in?" (list the 6 services as options)
+Step 3: "Which service are you most interested in?" (list the 6 services)
 Step 4: "Tell me a bit about your project or what you're trying to achieve."
-Step 5: Summarize all details and say: "Perfect! I've got everything. You can submit this on our [Contact page](/contact), or our team will reach out to [email] within 24 hours. 🚀"
+Step 5: Summarize all details and say they can submit at [Contact page](/contact) or the team will reach out within 24 hours.
 
 RULES:
-- NEVER make up pricing. Say "pricing depends on the project scope — our team will give you a custom quote after understanding your needs."
-- NEVER claim to do things outside SetupGram's 6 services.
-- If asked something completely off-topic (weather, general knowledge, etc.), politely redirect: "I'm Bizzua, SetupGram's assistant! I'm best at helping with digital business questions. Is there something about our services I can help with?"
-- Keep responses under 120 words unless a detailed explanation is explicitly requested.
-- When referencing a page, use markdown links: [Contact page](/contact)`;
+- NEVER make up pricing. Say pricing depends on scope and the team gives custom quotes.
+- NEVER claim services outside the 6 listed above.
+- Off-topic questions: politely redirect to SetupGram business topics.
+- Keep responses under 120 words unless detailed explanation is explicitly requested.
+- When referencing a page, use markdown links like [Contact page](/contact).`;
 
 export async function POST(request: Request) {
   try {
@@ -64,64 +65,107 @@ export async function POST(request: Request) {
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey || apiKey === "your_gemini_api_key_here") {
+
+    // Explicit check for missing or placeholder key
+    if (
+      !apiKey ||
+      apiKey.trim() === "" ||
+      apiKey === "your_gemini_api_key_here"
+    ) {
+      console.error("GEMINI_API_KEY is not set or is a placeholder.");
       return NextResponse.json({
-        reply: "I'm Bizzua! I'm currently being set up. Please contact us directly at info@setupgram.com — we'd love to hear from you! 😊",
+        reply:
+          "I'm Bizzua! I'm currently being configured. Please contact us directly at info@setupgram.com — we'd love to hear from you! 😊",
       });
     }
 
-    // Build Gemini contents array — prepend system prompt as first user turn
-    const contents = [
-      {
-        role: "user",
-        parts: [{ text: SYSTEM_PROMPT }],
-      },
-      {
-        role: "model",
-        parts: [{ text: "Understood! I'm Bizzua, SetupGram's assistant. I'm ready to help visitors learn about our services and get in touch." }],
-      },
-      // Conversation history
-      ...messages.map((m: { role: string; content: string }) => ({
+    // Build contents array — only user/model turns, NO fake system turn
+    // Gemini uses systemInstruction separately
+    const contents = messages
+      .filter((m: { role: string; content: string }) => m.content?.trim())
+      .map((m: { role: string; content: string }) => ({
         role: m.role === "assistant" ? "model" : "user",
         parts: [{ text: m.content }],
-      })),
-    ];
+      }));
+
+    // Gemini requires alternating user/model turns.
+    // Ensure the array starts with a user turn and has no consecutive same roles.
+    const sanitized: { role: string; parts: { text: string }[] }[] = [];
+    for (const turn of contents) {
+      const last = sanitized[sanitized.length - 1];
+      if (last && last.role === turn.role) {
+        // Merge consecutive same-role messages
+        last.parts[0].text += "\n" + turn.parts[0].text;
+      } else {
+        sanitized.push({ ...turn, parts: [{ text: turn.parts[0].text }] });
+      }
+    }
+
+    // Must start with user turn
+    if (sanitized.length === 0 || sanitized[0].role !== "user") {
+      return NextResponse.json({
+        reply: "Hi! How can I help you today? 😊",
+      });
+    }
+
+    const requestBody = {
+      // System instruction — the proper way in Gemini API
+      system_instruction: {
+        parts: [{ text: SYSTEM_INSTRUCTION }],
+      },
+      contents: sanitized,
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 500,
+        topP: 0.9,
+      },
+    };
 
     const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents,
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 400,
-          topP: 0.9,
-        },
-        safetySettings: [
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-        ],
-      }),
+      body: JSON.stringify(requestBody),
     });
 
+    // Log the full error from Gemini for debugging
     if (!res.ok) {
-      const err = await res.text();
-      console.error("Gemini API error:", err);
+      const errText = await res.text();
+      console.error(`Gemini API error ${res.status}:`, errText);
       return NextResponse.json({
-        reply: "I'm having a small hiccup right now. Please reach out to us at info@setupgram.com and we'll get back to you shortly!",
+        reply: `I'm having trouble connecting right now (error ${res.status}). Please reach out to us at info@setupgram.com and we'll get back to you shortly!`,
       });
     }
 
     const data = await res.json();
+
+    // Handle blocked responses (safety filters)
+    const candidate = data?.candidates?.[0];
+    if (!candidate) {
+      console.error("No candidates in Gemini response:", JSON.stringify(data));
+      return NextResponse.json({
+        reply:
+          "I couldn't generate a response. Please try rephrasing, or email us at info@setupgram.com!",
+      });
+    }
+
+    // Check finish reason
+    if (candidate.finishReason === "SAFETY") {
+      return NextResponse.json({
+        reply:
+          "I can't help with that particular topic, but I'm happy to answer any questions about SetupGram's services! 😊",
+      });
+    }
+
     const reply =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+      candidate?.content?.parts?.[0]?.text?.trim() ||
       "Sorry, I didn't catch that. Could you rephrase? Or feel free to email us at info@setupgram.com!";
 
     return NextResponse.json({ reply });
   } catch (error) {
-    console.error("Chat route error:", error);
+    console.error("Chat route exception:", error);
     return NextResponse.json({
-      reply: "Something went wrong on my end! Please contact us at info@setupgram.com and we'll be happy to help. 🙏",
+      reply:
+        "Something went wrong on my end! Please contact us at info@setupgram.com and we'll be happy to help. 🙏",
     });
   }
 }
