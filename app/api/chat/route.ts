@@ -2,9 +2,9 @@
 
 import { NextResponse } from "next/server";
 
-// Use gemini-2.5-flash — fastest, most available model on the free tier
+// Updated to the latest and most capable free-tier model
 const GEMINI_API_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent";
 
 const SYSTEM_INSTRUCTION = `You are Bizzua, the friendly and knowledgeable AI assistant for SetupGram Infotech Solutions — an AI-driven digital agency and strategic consulting firm based in India that serves clients worldwide.
 
@@ -15,6 +15,7 @@ YOUR PERSONALITY:
 - Use emojis sparingly — only when it adds warmth, not noise.
 
 ABOUT SETUPGRAM:
+- Company: SetupGram Infotech Solutions
 - Website: setupgram.com
 - Email: info@setupgram.com
 - Tagline: "Perfect Place For Business Solutions"
@@ -56,78 +57,60 @@ RULES:
 - Keep responses under 120 words unless detailed explanation is explicitly requested.
 - When referencing a page, use markdown links like [Contact page](/contact).`;
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const { messages } = await request.json();
+    // 1. Extract the user's message from the incoming request
+    const body = await req.json();
+    const userMessage = body.message; // Adjust 'message' based on your frontend payload
 
-    if (!messages || !Array.isArray(messages)) {
-      return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+    if (!userMessage) {
+      return NextResponse.json(
+        { reply: "I didn't receive a message. Could you try rephrasing?" },
+        { status: 400 },
+      );
     }
 
+    // 2. Ensure the API key is present in your environment variables
     const apiKey = process.env.GEMINI_API_KEY;
-
-    // Explicit check for missing or placeholder key
-    if (
-      !apiKey ||
-      apiKey.trim() === "" ||
-      apiKey === "your_gemini_api_key_here"
-    ) {
-      console.error("GEMINI_API_KEY is not set or is a placeholder.");
-      return NextResponse.json({
-        reply:
-          "I'm Bizzua! I'm currently being configured. Please contact us directly at info@setupgram.com — we'd love to hear from you! 😊",
-      });
+    if (!apiKey) {
+      console.error("GEMINI_API_KEY is missing from environment variables.");
+      return NextResponse.json(
+        {
+          reply:
+            "Server configuration error. Please contact info@setupgram.com!",
+        },
+        { status: 500 },
+      );
     }
 
-    // Build contents array — only user/model turns, NO fake system turn
-    // Gemini uses systemInstruction separately
-    const contents = messages
-      .filter((m: { role: string; content: string }) => m.content?.trim())
-      .map((m: { role: string; content: string }) => ({
-        role: m.role === "assistant" ? "model" : "user",
-        parts: [{ text: m.content }],
-      }));
-
-    // Gemini requires alternating user/model turns.
-    // Ensure the array starts with a user turn and has no consecutive same roles.
-    const sanitized: { role: string; parts: { text: string }[] }[] = [];
-    for (const turn of contents) {
-      const last = sanitized[sanitized.length - 1];
-      if (last && last.role === turn.role) {
-        // Merge consecutive same-role messages
-        last.parts[0].text += "\n" + turn.parts[0].text;
-      } else {
-        sanitized.push({ ...turn, parts: [{ text: turn.parts[0].text }] });
-      }
-    }
-
-    // Must start with user turn
-    if (sanitized.length === 0 || sanitized[0].role !== "user") {
-      return NextResponse.json({
-        reply: "Hi! How can I help you today? 😊",
-      });
-    }
-
-    const requestBody = {
-      // System instruction — the proper way in Gemini API
-      system_instruction: {
+    // 3. Construct the payload matching the strict Gemini REST API schema
+    const payload = {
+      systemInstruction: {
         parts: [{ text: SYSTEM_INSTRUCTION }],
       },
-      contents: sanitized,
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: userMessage }],
+        },
+      ],
       generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 500,
-        topP: 0.9,
+        temperature: 0.7, // Helps keep the bot creative but focused
+        maxOutputTokens: 1024,
       },
     };
 
-    const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+    // 4. Execute the fetch request securely using headers
+    const res = await fetch(GEMINI_API_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestBody),
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
+      body: JSON.stringify(payload),
     });
 
-    // Log the full error from Gemini for debugging
+    // 5. Handle HTTP-level errors (4xx, 5xx)
     if (!res.ok) {
       const errText = await res.text();
       console.error(`Gemini API error ${res.status}:`, errText);
@@ -138,7 +121,7 @@ export async function POST(request: Request) {
 
     const data = await res.json();
 
-    // Handle blocked responses (safety filters)
+    // 6. Handle blocked responses or empty candidates
     const candidate = data?.candidates?.[0];
     if (!candidate) {
       console.error("No candidates in Gemini response:", JSON.stringify(data));
@@ -148,7 +131,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // Check finish reason
+    // 7. Check the safety finish reason
     if (candidate.finishReason === "SAFETY") {
       return NextResponse.json({
         reply:
@@ -156,6 +139,7 @@ export async function POST(request: Request) {
       });
     }
 
+    // 8. Extract the text safely
     const reply =
       candidate?.content?.parts?.[0]?.text?.trim() ||
       "Sorry, I didn't catch that. Could you rephrase? Or feel free to email us at info@setupgram.com!";
@@ -165,7 +149,7 @@ export async function POST(request: Request) {
     console.error("Chat route exception:", error);
     return NextResponse.json({
       reply:
-        "Something went wrong on my end! Please contact us at info@setupgram.com and we'll be happy to help. 🙏",
+        "Something went wrong on my end! Please contact us at info@setupgram.com",
     });
   }
 }
