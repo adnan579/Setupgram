@@ -2,9 +2,9 @@
 
 import { NextResponse } from "next/server";
 
-// Use gemini-2.0-flash — fastest, most available model on the free tier
+// Use gemini-2.5-flash — fastest, most available model on the free tier
 const GEMINI_API_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 const SYSTEM_INSTRUCTION = `You are Bizzua, the friendly and knowledgeable AI assistant for SetupGram Infotech Solutions — an AI-driven digital agency and strategic consulting firm based in India that serves clients worldwide.
 
