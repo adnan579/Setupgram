@@ -2,7 +2,10 @@
 
 import { NextResponse } from "next/server";
 
-// Updated to the latest and most capable free-tier model
+// 1. VERCEL FIX: Force dynamic rendering so Next.js never caches this API route.
+export const dynamic = "force-dynamic";
+
+// Using the most capable Free Tier model (gemini-3.5-flash)
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent";
 
@@ -59,9 +62,20 @@ RULES:
 
 export async function POST(req: Request) {
   try {
-    // 1. Extract the user's message from the incoming request
-    const body = await req.json();
-    const userMessage = body.message; // Adjust 'message' based on your frontend payload
+    // 2. Resilient Parsing: Catch cases where the frontend payload is malformed
+    let body;
+    try {
+      body = await req.json();
+    } catch (parseError) {
+      console.error("Failed to parse request JSON:", parseError);
+      return NextResponse.json(
+        { reply: "Invalid request format. Expected JSON." },
+        { status: 400 },
+      );
+    }
+
+    // Support multiple common frontend variable names
+    const userMessage = body.message || body.prompt || body.text;
 
     if (!userMessage) {
       return NextResponse.json(
@@ -70,20 +84,19 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Ensure the API key is present in your environment variables
+    // 3. Environment Variable Check
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      console.error("GEMINI_API_KEY is missing from environment variables.");
+      console.error("CRITICAL ERROR: GEMINI_API_KEY is undefined.");
       return NextResponse.json(
         {
           reply:
-            "Server configuration error. Please contact info@setupgram.com!",
+            "Server configuration error. API key is missing on the server.",
         },
         { status: 500 },
       );
     }
 
-    // 3. Construct the payload matching the strict Gemini REST API schema
     const payload = {
       systemInstruction: {
         parts: [{ text: SYSTEM_INSTRUCTION }],
@@ -95,43 +108,43 @@ export async function POST(req: Request) {
         },
       ],
       generationConfig: {
-        temperature: 0.7, // Helps keep the bot creative but focused
+        temperature: 0.7,
         maxOutputTokens: 1024,
       },
     };
 
-    // 4. Execute the fetch request securely using headers
-    const res = await fetch(GEMINI_API_URL, {
+    // 4. VERCEL FIX: Attach the key directly to the URL to prevent header-stripping
+    const urlWithKey = `${GEMINI_API_URL}?key=${apiKey}`;
+
+    const res = await fetch(urlWithKey, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
       },
       body: JSON.stringify(payload),
     });
 
-    // 5. Handle HTTP-level errors (4xx, 5xx)
+    // 5. Verbose Error Logging for production debugging
     if (!res.ok) {
       const errText = await res.text();
       console.error(`Gemini API error ${res.status}:`, errText);
-      return NextResponse.json({
-        reply: `I'm having trouble connecting right now (error ${res.status}). Please reach out to us at info@setupgram.com and we'll get back to you shortly!`,
-      });
+      return NextResponse.json(
+        { reply: `Google API Error ${res.status}. Check Vercel Server Logs.` },
+        { status: res.status },
+      );
     }
 
     const data = await res.json();
 
-    // 6. Handle blocked responses or empty candidates
     const candidate = data?.candidates?.[0];
     if (!candidate) {
-      console.error("No candidates in Gemini response:", JSON.stringify(data));
-      return NextResponse.json({
-        reply:
-          "I couldn't generate a response. Please try rephrasing, or email us at info@setupgram.com!",
-      });
+      console.error("No candidates in Gemini response:", data);
+      return NextResponse.json(
+        { reply: "I couldn't generate a response. Please try rephrasing!" },
+        { status: 500 },
+      );
     }
 
-    // 7. Check the safety finish reason
     if (candidate.finishReason === "SAFETY") {
       return NextResponse.json({
         reply:
@@ -139,17 +152,18 @@ export async function POST(req: Request) {
       });
     }
 
-    // 8. Extract the text safely
     const reply =
       candidate?.content?.parts?.[0]?.text?.trim() ||
-      "Sorry, I didn't catch that. Could you rephrase? Or feel free to email us at info@setupgram.com!";
+      "Sorry, I didn't catch that. Could you rephrase?";
 
     return NextResponse.json({ reply });
   } catch (error) {
     console.error("Chat route exception:", error);
-    return NextResponse.json({
-      reply:
-        "Something went wrong on my end! Please contact us at info@setupgram.com",
-    });
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json(
+      { reply: `Server encountered an error: ${errorMessage}` },
+      { status: 500 },
+    );
   }
 }
