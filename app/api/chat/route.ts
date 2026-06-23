@@ -4,11 +4,14 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-// gemini-2.5-flash — the current FREE TIER model (as of June 2026)
-// gemini-2.0-flash, 1.5-flash, 1.5-pro are ALL SHUT DOWN (404)
-// gemini-3.5-flash does NOT exist yet
+// gemini-2.5-flash — current free tier model (10 RPM, 250 RPD on free)
 const GEMINI_MODEL = "gemini-2.5-flash";
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
+// Simple in-memory rate limiter — 1 request per 7 seconds per IP
+// (conservative to stay well under 10 RPM free tier limit)
+const rateLimitMap = new Map<string, number>();
+const RATE_LIMIT_MS = 7000; // 7 seconds between requests per IP
 
 const SYSTEM_INSTRUCTION = `You are Bizzua, the friendly and knowledgeable AI assistant for SetupGram Infotech Solutions — an AI-driven digital agency and strategic consulting firm based in India that serves clients worldwide.
 
@@ -23,47 +26,32 @@ ABOUT SETUPGRAM:
 - Website: setupgram.com
 - Email: info@setupgram.com
 - Tagline: "Perfect Place For Business Solutions"
-- SetupGram helps businesses grow online through technology and strategy.
 
-SERVICES (know these perfectly):
-1. App Development — Web, Android, and iOS apps built end-to-end. Fast, scalable, tailored to the client's business.
-2. AI Chatbots (Core Service) — Intelligent AI chatbot integration for websites and apps to automate support and scale sales.
-3. CRM Solutions — Custom CRM systems built exactly for the client's workflow, replacing clunky tools like HubSpot/Salesforce.
-4. Digital Marketing — SEO, social media campaigns, and performance marketing with measurable ROI.
-5. Advertising — High-end paid ad campaigns across Google Ads, Meta, Instagram, LinkedIn, YouTube, Twitter/X. Full-funnel strategy.
-6. Business Consulting — Strategic roadmaps and digital transformation plans for businesses going online.
+SERVICES:
+1. App Development — Web, Android, iOS apps built end-to-end.
+2. AI Chatbots (Core) — Intelligent chatbot integration for websites/apps.
+3. CRM Solutions — Custom CRM systems replacing HubSpot/Salesforce.
+4. Digital Marketing — SEO, social media, performance marketing.
+5. Advertising — Paid campaigns on Google, Meta, Instagram, LinkedIn, YouTube, Twitter/X.
+6. Business Consulting — Strategic roadmaps for digital transformation.
 
-WEBSITE PAGES:
-- / (Home) — Hero, Services, Consulting, Testimonials
-- /about — Mission, Team, Values, Blog
-- /contact — Contact form
-- /blog/[slug] — Blog articles
-
-YOUR CAPABILITIES:
-1. Answer questions about SetupGram's services, pricing approach, team, and capabilities.
-2. Navigate users — tell them which page to visit for what they need.
-3. Qualify leads — guide interested users toward /contact.
-4. Run the contact intake step-by-step when user wants to get in touch.
-5. Explain services in detail when asked.
-6. Handle objections about cost, timeline, or fit professionally.
-
-CONTACT FORM FLOW (use this exact sequence when user wants to get in touch):
-Step 1: "Great! First, what's your name?"
-Step 2: "Nice to meet you, [name]! What's your email address?"
-Step 3: "Which service are you most interested in?" (list the 6 services)
-Step 4: "Tell me a bit about your project or what you're trying to achieve."
-Step 5: Summarize all details and say they can submit at [Contact page](/contact) or the team will reach out within 24 hours.
+CONTACT FLOW (when user wants to get in touch):
+Step 1: Ask for their name.
+Step 2: Ask for their email.
+Step 3: Ask which service they're interested in (list all 6).
+Step 4: Ask about their project/goals.
+Step 5: Summarize and direct to [Contact page](/contact).
 
 RULES:
-- NEVER make up pricing. Say pricing depends on scope and the team gives custom quotes.
-- NEVER claim services outside the 6 listed above.
-- Off-topic questions: politely redirect to SetupGram business topics.
-- Keep responses under 120 words unless detailed explanation is explicitly requested.
-- When referencing a page, use markdown links like [Contact page](/contact).`;
+- Never make up pricing — custom quotes only.
+- Only discuss the 6 services listed above.
+- Keep responses under 120 words unless detail is explicitly requested.
+- Use markdown links like [Contact page](/contact) for pages.
+- Off-topic questions: redirect to SetupGram business topics.`;
 
 export async function POST(request: Request) {
   try {
-    // ── 1. Parse body ──────────────────────────────────────────────────────
+    // ── 1. Parse body ────────────────────────────────────────────────────────
     let body: { messages?: { role: string; content: string }[] };
     try {
       body = await request.json();
@@ -74,7 +62,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Bizzua.tsx sends: { messages: [{ role, content }, ...] }
     const messages = body.messages;
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -83,7 +70,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // ── 2. API key check ───────────────────────────────────────────────────
+    // ── 2. API key check ─────────────────────────────────────────────────────
     const apiKey = process.env.GEMINI_API_KEY;
     if (
       !apiKey ||
@@ -93,19 +80,45 @@ export async function POST(request: Request) {
       console.error("GEMINI_API_KEY is missing or invalid.");
       return NextResponse.json({
         reply:
-          "Bizzua is currently being configured. Please contact us directly at info@setupgram.com — we'd love to hear from you! 😊",
+          "Bizzua is being configured. Please contact us at info@setupgram.com 😊",
       });
     }
 
-    // ── 3. Build Gemini contents array ─────────────────────────────────────
-    // Gemini requires strictly alternating user/model turns starting with user.
-    // Filter out empty messages and the welcome assistant message first.
-    const rawContents = messages
+    // ── 3. Per-IP rate limiting (protect free tier) ──────────────────────────
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+
+    const now = Date.now();
+    const lastRequest = rateLimitMap.get(ip) || 0;
+    if (now - lastRequest < RATE_LIMIT_MS) {
+      const waitSec = Math.ceil((RATE_LIMIT_MS - (now - lastRequest)) / 1000);
+      return NextResponse.json({
+        reply: `Please wait ${waitSec} second${waitSec > 1 ? "s" : ""} before sending another message 😊`,
+      });
+    }
+    rateLimitMap.set(ip, now);
+
+    // Clean up old entries every 100 requests to prevent memory leak
+    if (rateLimitMap.size > 100) {
+      const cutoff = now - 60000;
+      for (const [key, val] of rateLimitMap.entries()) {
+        if (val < cutoff) rateLimitMap.delete(key);
+      }
+    }
+
+    // ── 4. Build Gemini contents — TRIM TO LAST 6 TURNS ONLY ────────────────
+    // Sending full history on every message burns rate limits fast.
+    // 6 turns (3 user + 3 model) gives enough context without being wasteful.
+    const trimmedMessages = messages
       .filter((m) => m.content && m.content.trim() !== "")
-      .map((m) => ({
-        role: m.role === "assistant" ? "model" : "user",
-        parts: [{ text: m.content.trim() }],
-      }));
+      .slice(-6); // Keep only last 6 messages
+
+    const rawContents = trimmedMessages.map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content.trim() }],
+    }));
 
     // Merge consecutive same-role turns (Gemini strict requirement)
     const contents: { role: string; parts: { text: string }[] }[] = [];
@@ -121,7 +134,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // Must start with a user turn — if first turn is "model", remove it
+    // Must start with a user turn
     while (contents.length > 0 && contents[0].role !== "user") {
       contents.shift();
     }
@@ -132,7 +145,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // ── 4. Call Gemini API ─────────────────────────────────────────────────
+    // ── 5. Call Gemini with exponential backoff on 429/503 ───────────────────
     const requestBody = {
       system_instruction: {
         parts: [{ text: SYSTEM_INSTRUCTION }],
@@ -140,45 +153,71 @@ export async function POST(request: Request) {
       contents,
       generationConfig: {
         temperature: 0.7,
-        maxOutputTokens: 500,
+        maxOutputTokens: 400,
         topP: 0.9,
       },
     };
 
-    const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestBody),
-    });
+    let res: Response | null = null;
+    let lastError = "";
+    const maxRetries = 2;
 
-    // ── 5. Handle errors ───────────────────────────────────────────────────
-    if (!res.ok) {
-      const errText = await res.text();
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      if (attempt > 0) {
+        // Wait before retry: 2s then 4s
+        await new Promise((r) => setTimeout(r, attempt * 2000));
+      }
+
+      res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (res.ok) break;
+
+      lastError = `${res.status}`;
+
+      // Only retry on 429 and 503
+      if (res.status !== 429 && res.status !== 503) break;
+    }
+
+    // ── 6. Handle final error after retries ──────────────────────────────────
+    if (!res || !res.ok) {
+      const errText = (await res?.text().catch(() => "")) || "";
       console.error(
-        `Gemini API error ${res.status} (model: ${GEMINI_MODEL}):`,
-        errText,
+        `Gemini error ${lastError} after retries:`,
+        errText.slice(0, 300),
       );
 
-      if (res.status === 429) {
+      if (lastError === "429") {
         return NextResponse.json({
           reply:
-            "I'm receiving a lot of messages right now! Please try again in a moment, or email us at info@setupgram.com 😊",
+            "I'm a bit busy right now! ⏳ Please wait a few seconds and try again, or email us at info@setupgram.com",
+        });
+      }
+
+      if (lastError === "503") {
+        return NextResponse.json({
+          reply:
+            "The AI service is temporarily unavailable. Please try again in a moment, or reach out at info@setupgram.com 🙏",
         });
       }
 
       return NextResponse.json({
-        reply: `I'm having trouble connecting right now. Please reach out to us at info@setupgram.com and we'll get back to you shortly!`,
+        reply:
+          "I'm having trouble connecting right now. Please email us at info@setupgram.com and we'll get back to you shortly!",
       });
     }
 
-    // ── 6. Parse response ──────────────────────────────────────────────────
+    // ── 7. Parse response ─────────────────────────────────────────────────────
     const data = await res.json();
-
     const candidate = data?.candidates?.[0];
+
     if (!candidate) {
       console.error(
         "No candidates in Gemini response:",
-        JSON.stringify(data).slice(0, 500),
+        JSON.stringify(data).slice(0, 300),
       );
       return NextResponse.json({
         reply:
@@ -189,20 +228,20 @@ export async function POST(request: Request) {
     if (candidate.finishReason === "SAFETY") {
       return NextResponse.json({
         reply:
-          "I can't help with that particular topic, but I'm happy to answer any questions about SetupGram's services! 😊",
+          "I can't help with that topic, but I'm happy to answer questions about SetupGram's services! 😊",
       });
     }
 
     const reply =
       candidate?.content?.parts?.[0]?.text?.trim() ||
-      "Sorry, I didn't catch that. Could you rephrase? Or feel free to email us at info@setupgram.com!";
+      "Sorry, I didn't catch that. Could you rephrase? Or email us at info@setupgram.com!";
 
     return NextResponse.json({ reply });
   } catch (error) {
     console.error("Chat route exception:", error);
     return NextResponse.json({
       reply:
-        "Something went wrong on my end! Please contact us at info@setupgram.com and we'll be happy to help. 🙏",
+        "Something went wrong on my end! Please contact us at info@setupgram.com 🙏",
     });
   }
 }

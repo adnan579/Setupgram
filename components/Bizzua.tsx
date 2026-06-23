@@ -30,21 +30,19 @@ const INITIAL_QUICK_REPLIES: QuickReply[] = [
   { label: "💰 Pricing", value: "How does your pricing work?" },
 ];
 
-// Very lightweight markdown → JSX renderer (bold, links, line breaks)
+// Cooldown between sends (ms) — matches server-side rate limit
+const SEND_COOLDOWN_MS = 7000;
+
 function renderMarkdown(text: string) {
   const lines = text.split("\n");
   return lines.map((line, li) => {
-    // Parse inline: **bold** and [text](url)
     const parts: React.ReactNode[] = [];
     let remaining = line;
     let key = 0;
 
     while (remaining.length > 0) {
-      // Bold
       const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
-      // Link
       const linkMatch = remaining.match(/\[(.+?)\]\((.+?)\)/);
-
       const boldIdx = boldMatch ? remaining.indexOf(boldMatch[0]) : Infinity;
       const linkIdx = linkMatch ? remaining.indexOf(linkMatch[0]) : Infinity;
 
@@ -140,17 +138,19 @@ export default function Bizzua() {
   const [showBadge, setShowBadge] = useState(false);
   const [unread, setUnread] = useState(0);
   const [hasOpened, setHasOpened] = useState(false);
+  // Cooldown state to prevent rate limit hits
+  const [cooldown, setCooldown] = useState(0); // seconds remaining
+  const cooldownRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSentRef = useRef<number>(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll to latest message
   useEffect(() => {
     if (open && !minimized) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, open, minimized, loading]);
 
-  // Show attention badge after 8 seconds if not opened
   useEffect(() => {
     const t = setTimeout(() => {
       if (!hasOpened) {
@@ -161,6 +161,27 @@ export default function Bizzua() {
     return () => clearTimeout(t);
   }, [hasOpened]);
 
+  // Cooldown countdown timer
+  const startCooldown = useCallback(() => {
+    const totalSecs = Math.ceil(SEND_COOLDOWN_MS / 1000);
+    setCooldown(totalSecs);
+    let remaining = totalSecs;
+    cooldownRef.current = setInterval(() => {
+      remaining -= 1;
+      setCooldown(remaining);
+      if (remaining <= 0) {
+        clearInterval(cooldownRef.current!);
+        setCooldown(0);
+      }
+    }, 1000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (cooldownRef.current) clearInterval(cooldownRef.current);
+    };
+  }, []);
+
   function handleOpen() {
     setOpen(true);
     setMinimized(false);
@@ -169,11 +190,9 @@ export default function Bizzua() {
     setUnread(0);
     setTimeout(() => inputRef.current?.focus(), 300);
   }
-
   function handleClose() {
     setOpen(false);
   }
-
   function handleMinimize() {
     setMinimized(true);
     setOpen(false);
@@ -182,7 +201,13 @@ export default function Bizzua() {
 
   const sendMessage = useCallback(
     async (text: string) => {
-      if (!text.trim() || loading) return;
+      if (!text.trim() || loading || cooldown > 0) return;
+
+      // Client-side rate guard
+      const now = Date.now();
+      if (now - lastSentRef.current < SEND_COOLDOWN_MS) return;
+      lastSentRef.current = now;
+
       setInput("");
       setQuickReplies([]);
 
@@ -195,18 +220,21 @@ export default function Bizzua() {
 
       setMessages((prev) => [...prev, userMsg]);
       setLoading(true);
+      startCooldown();
 
       try {
-        // Build history for API (exclude welcome message id)
-        const history = [...messages, userMsg].map((m) => ({
-          role: m.role,
-          content: m.content,
-        }));
+        const allMessages = [...messages, userMsg];
+
+        // Only send last 6 messages to API — reduces payload & rate limit pressure
+        const recentMessages = allMessages
+          .filter((m) => m.id !== "welcome") // exclude static welcome message
+          .slice(-6)
+          .map((m) => ({ role: m.role, content: m.content }));
 
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: history }),
+          body: JSON.stringify({ messages: recentMessages }),
         });
 
         const data = await res.json();
@@ -222,7 +250,7 @@ export default function Bizzua() {
 
         setMessages((prev) => [...prev, assistantMsg]);
 
-        // Generate contextual quick replies based on response content
+        // Generate contextual quick replies
         const lower = reply.toLowerCase();
         const nextReplies: QuickReply[] = [];
 
@@ -242,7 +270,7 @@ export default function Bizzua() {
           lower.includes("team")
         ) {
           nextReplies.push({
-            label: "📋 Fill Contact Form",
+            label: "📋 Contact Form",
             value: "I want to get in touch with the team",
           });
         }
@@ -258,18 +286,10 @@ export default function Bizzua() {
         }
         if (lower.includes("app") || lower.includes("development")) {
           nextReplies.push({
-            label: "📱 App Development",
+            label: "📱 App Dev",
             value: "Tell me more about app development",
           });
         }
-        if (lower.includes("blog") || lower.includes("article")) {
-          nextReplies.push({
-            label: "📖 Visit Blog",
-            value: "Where can I read your blog?",
-          });
-        }
-
-        // Always add a fallback
         if (nextReplies.length < 2) {
           nextReplies.push({
             label: "🔍 More Questions",
@@ -280,7 +300,6 @@ export default function Bizzua() {
             value: "I want to speak with someone from your team",
           });
         }
-
         setQuickReplies(nextReplies.slice(0, 3));
       } catch {
         setMessages((prev) => [
@@ -297,25 +316,25 @@ export default function Bizzua() {
         setLoading(false);
       }
     },
-    [messages, loading],
+    [messages, loading, cooldown, startCooldown],
   );
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     sendMessage(input);
   }
-
   function handleQuickReply(value: string) {
     sendMessage(value);
   }
-
   function handleReset() {
     setMessages([WELCOME_MESSAGE]);
     setQuickReplies(INITIAL_QUICK_REPLIES);
     setInput("");
+    lastSentRef.current = 0;
   }
 
   const isOpen = open && !minimized;
+  const canSend = !loading && cooldown === 0 && input.trim().length > 0;
 
   return (
     <>
@@ -426,7 +445,6 @@ export default function Bizzua() {
                 className={`flex items-end gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
               >
                 {msg.role === "assistant" && <BizzuaAvatar />}
-
                 <div
                   className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                     msg.role === "user"
@@ -440,13 +458,12 @@ export default function Bizzua() {
                 </div>
               </div>
             ))}
-
             {loading && <TypingIndicator />}
             <div ref={messagesEndRef} />
           </div>
 
           {/* Quick Replies */}
-          {quickReplies.length > 0 && !loading && (
+          {quickReplies.length > 0 && !loading && cooldown === 0 && (
             <div className="px-4 pb-2 flex flex-wrap gap-2">
               {quickReplies.map((qr) => (
                 <button
@@ -471,8 +488,12 @@ export default function Bizzua() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask Bizzua anything…"
-                disabled={loading}
+                placeholder={
+                  cooldown > 0
+                    ? `Please wait ${cooldown}s…`
+                    : "Ask Bizzua anything…"
+                }
+                disabled={loading || cooldown > 0}
                 className="flex-1 px-4 py-2.5 rounded-xl text-sm disabled:opacity-50 focus:ring-1 focus:ring-primary/30"
                 style={{
                   background: "rgba(255,255,255,0.05)",
@@ -482,22 +503,48 @@ export default function Bizzua() {
               />
               <button
                 type="submit"
-                disabled={!input.trim() || loading}
-                className="w-10 h-10 flex-shrink-0 rounded-xl bg-primary text-dark flex items-center justify-center hover:shadow-[0_0_15px_rgba(0,240,255,0.4)] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                disabled={!canSend}
+                className="w-10 h-10 flex-shrink-0 rounded-xl bg-primary text-dark flex items-center justify-center hover:shadow-[0_0_15px_rgba(0,240,255,0.4)] transition-all disabled:opacity-40 disabled:cursor-not-allowed relative"
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2.5}
-                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                  />
-                </svg>
+                {cooldown > 0 ? (
+                  <span className="text-xs font-bold text-dark">
+                    {cooldown}
+                  </span>
+                ) : loading ? (
+                  <svg
+                    className="animate-spin w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2.5}
+                      d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                    />
+                  </svg>
+                )}
               </button>
             </div>
             <p className="text-center text-xs text-gray-700 mt-2">
@@ -518,22 +565,17 @@ export default function Bizzua() {
         }`}
         style={{ background: "linear-gradient(135deg, #00f0ff, #b026ff)" }}
       >
-        {/* Pulse ring */}
         {showBadge && (
           <div
             className="absolute inset-0 rounded-full animate-ping"
             style={{ background: "rgba(0,240,255,0.3)" }}
           />
         )}
-
-        {/* Unread badge */}
         {unread > 0 && (
           <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
             {unread}
           </div>
         )}
-
-        {/* Icon */}
         <svg
           className="w-6 h-6 text-dark"
           fill="currentColor"
@@ -543,7 +585,7 @@ export default function Bizzua() {
         </svg>
       </button>
 
-      {/* ── Attention tooltip (shown once after delay) ── */}
+      {/* ── Attention tooltip ── */}
       {showBadge && !hasOpened && (
         <div
           className="fixed bottom-[5.5rem] right-5 sm:right-6 z-[9998] glass-panel rounded-xl px-4 py-3 border border-primary/20 shadow-lg max-w-[200px] animate-fade-in cursor-pointer"
