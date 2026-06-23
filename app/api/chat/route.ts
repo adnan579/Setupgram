@@ -4,14 +4,12 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-// gemini-2.5-flash — current free tier model (10 RPM, 250 RPD on free)
 const GEMINI_MODEL = "gemini-2.5-flash";
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 // Simple in-memory rate limiter — 1 request per 7 seconds per IP
-// (conservative to stay well under 10 RPM free tier limit)
 const rateLimitMap = new Map<string, number>();
-const RATE_LIMIT_MS = 7000; // 7 seconds between requests per IP
+const RATE_LIMIT_MS = 7000;
 
 const SYSTEM_INSTRUCTION = `You are Bizzua, the friendly and knowledgeable AI assistant for SetupGram Infotech Solutions — an AI-driven digital agency and strategic consulting firm based in India that serves clients worldwide.
 
@@ -84,14 +82,15 @@ export async function POST(request: Request) {
       });
     }
 
-    // ── 3. Per-IP rate limiting (protect free tier) ──────────────────────────
+    // ── 3. Per-IP rate limiting ──────────────────────────────────────────────
     const ip =
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       request.headers.get("x-real-ip") ||
       "unknown";
 
     const now = Date.now();
-    const lastRequest = rateLimitMap.get(ip) || 0;
+    const lastRequest = rateLimitMap.get(ip) ?? 0;
+
     if (now - lastRequest < RATE_LIMIT_MS) {
       const waitSec = Math.ceil((RATE_LIMIT_MS - (now - lastRequest)) / 1000);
       return NextResponse.json({
@@ -100,20 +99,20 @@ export async function POST(request: Request) {
     }
     rateLimitMap.set(ip, now);
 
-    // Clean up old entries every 100 requests to prevent memory leak
+    // Clean up old entries — FIX: use Array.from() to avoid ES2015 iterator issue
     if (rateLimitMap.size > 100) {
       const cutoff = now - 60000;
-      for (const [key, val] of rateLimitMap.entries()) {
-        if (val < cutoff) rateLimitMap.delete(key);
-      }
+      Array.from(rateLimitMap.keys()).forEach((key) => {
+        if ((rateLimitMap.get(key) ?? 0) < cutoff) {
+          rateLimitMap.delete(key);
+        }
+      });
     }
 
-    // ── 4. Build Gemini contents — TRIM TO LAST 6 TURNS ONLY ────────────────
-    // Sending full history on every message burns rate limits fast.
-    // 6 turns (3 user + 3 model) gives enough context without being wasteful.
+    // ── 4. Build Gemini contents — trim to last 6 turns ─────────────────────
     const trimmedMessages = messages
       .filter((m) => m.content && m.content.trim() !== "")
-      .slice(-6); // Keep only last 6 messages
+      .slice(-6);
 
     const rawContents = trimmedMessages.map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
@@ -140,16 +139,12 @@ export async function POST(request: Request) {
     }
 
     if (contents.length === 0) {
-      return NextResponse.json({
-        reply: "Hi! How can I help you today? 😊",
-      });
+      return NextResponse.json({ reply: "Hi! How can I help you today? 😊" });
     }
 
-    // ── 5. Call Gemini with exponential backoff on 429/503 ───────────────────
+    // ── 5. Call Gemini with retry on 429/503 ─────────────────────────────────
     const requestBody = {
-      system_instruction: {
-        parts: [{ text: SYSTEM_INSTRUCTION }],
-      },
+      system_instruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
       contents,
       generationConfig: {
         temperature: 0.7,
@@ -159,12 +154,10 @@ export async function POST(request: Request) {
     };
 
     let res: Response | null = null;
-    let lastError = "";
-    const maxRetries = 2;
+    let lastStatus = 0;
 
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    for (let attempt = 0; attempt <= 2; attempt++) {
       if (attempt > 0) {
-        // Wait before retry: 2s then 4s
         await new Promise((r) => setTimeout(r, attempt * 2000));
       }
 
@@ -174,39 +167,34 @@ export async function POST(request: Request) {
         body: JSON.stringify(requestBody),
       });
 
+      lastStatus = res.status;
       if (res.ok) break;
-
-      lastError = `${res.status}`;
-
-      // Only retry on 429 and 503
       if (res.status !== 429 && res.status !== 503) break;
     }
 
-    // ── 6. Handle final error after retries ──────────────────────────────────
+    // ── 6. Handle errors after retries ───────────────────────────────────────
     if (!res || !res.ok) {
-      const errText = (await res?.text().catch(() => "")) || "";
+      const errText = res ? await res.text().catch(() => "") : "";
       console.error(
-        `Gemini error ${lastError} after retries:`,
+        `Gemini error ${lastStatus} after retries:`,
         errText.slice(0, 300),
       );
 
-      if (lastError === "429") {
+      if (lastStatus === 429) {
         return NextResponse.json({
           reply:
             "I'm a bit busy right now! ⏳ Please wait a few seconds and try again, or email us at info@setupgram.com",
         });
       }
-
-      if (lastError === "503") {
+      if (lastStatus === 503) {
         return NextResponse.json({
           reply:
-            "The AI service is temporarily unavailable. Please try again in a moment, or reach out at info@setupgram.com 🙏",
+            "The AI service is temporarily unavailable. Please try again in a moment, or reach us at info@setupgram.com 🙏",
         });
       }
-
       return NextResponse.json({
         reply:
-          "I'm having trouble connecting right now. Please email us at info@setupgram.com and we'll get back to you shortly!",
+          "I'm having trouble connecting. Please email us at info@setupgram.com and we'll get back to you shortly!",
       });
     }
 
@@ -228,7 +216,7 @@ export async function POST(request: Request) {
     if (candidate.finishReason === "SAFETY") {
       return NextResponse.json({
         reply:
-          "I can't help with that topic, but I'm happy to answer questions about SetupGram's services! 😊",
+          "I can't help with that topic, but happy to answer questions about SetupGram's services! 😊",
       });
     }
 
