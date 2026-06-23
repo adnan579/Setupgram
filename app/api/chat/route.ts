@@ -2,12 +2,13 @@
 
 import { NextResponse } from "next/server";
 
-// 1. VERCEL FIX: Force dynamic rendering so Next.js never caches this API route.
 export const dynamic = "force-dynamic";
 
-// Using the most capable Free Tier model (gemini-3.5-flash)
-const GEMINI_API_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent";
+// gemini-2.5-flash — the current FREE TIER model (as of June 2026)
+// gemini-2.0-flash, 1.5-flash, 1.5-pro are ALL SHUT DOWN (404)
+// gemini-3.5-flash does NOT exist yet
+const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 const SYSTEM_INSTRUCTION = `You are Bizzua, the friendly and knowledgeable AI assistant for SetupGram Infotech Solutions — an AI-driven digital agency and strategic consulting firm based in India that serves clients worldwide.
 
@@ -60,89 +61,129 @@ RULES:
 - Keep responses under 120 words unless detailed explanation is explicitly requested.
 - When referencing a page, use markdown links like [Contact page](/contact).`;
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    // 2. Resilient Parsing: Catch cases where the frontend payload is malformed
-    let body;
+    // ── 1. Parse body ──────────────────────────────────────────────────────
+    let body: { messages?: { role: string; content: string }[] };
     try {
-      body = await req.json();
-    } catch (parseError) {
-      console.error("Failed to parse request JSON:", parseError);
+      body = await request.json();
+    } catch {
       return NextResponse.json(
-        { reply: "Invalid request format. Expected JSON." },
+        { reply: "Invalid request. Please try again." },
         { status: 400 },
       );
     }
 
-    // Support multiple common frontend variable names
-    const userMessage = body.message || body.prompt || body.text;
-
-    if (!userMessage) {
+    // Bizzua.tsx sends: { messages: [{ role, content }, ...] }
+    const messages = body.messages;
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
-        { reply: "I didn't receive a message. Could you try rephrasing?" },
+        { reply: "No messages received. Please try again." },
         { status: 400 },
       );
     }
 
-    // 3. Environment Variable Check
+    // ── 2. API key check ───────────────────────────────────────────────────
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.error("CRITICAL ERROR: GEMINI_API_KEY is undefined.");
-      return NextResponse.json(
-        {
-          reply:
-            "Server configuration error. API key is missing on the server.",
-        },
-        { status: 500 },
-      );
+    if (
+      !apiKey ||
+      apiKey.trim() === "" ||
+      apiKey === "your_gemini_api_key_here"
+    ) {
+      console.error("GEMINI_API_KEY is missing or invalid.");
+      return NextResponse.json({
+        reply:
+          "Bizzua is currently being configured. Please contact us directly at info@setupgram.com — we'd love to hear from you! 😊",
+      });
     }
 
-    const payload = {
-      systemInstruction: {
+    // ── 3. Build Gemini contents array ─────────────────────────────────────
+    // Gemini requires strictly alternating user/model turns starting with user.
+    // Filter out empty messages and the welcome assistant message first.
+    const rawContents = messages
+      .filter((m) => m.content && m.content.trim() !== "")
+      .map((m) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content.trim() }],
+      }));
+
+    // Merge consecutive same-role turns (Gemini strict requirement)
+    const contents: { role: string; parts: { text: string }[] }[] = [];
+    for (const turn of rawContents) {
+      const last = contents[contents.length - 1];
+      if (last && last.role === turn.role) {
+        last.parts[0].text += "\n" + turn.parts[0].text;
+      } else {
+        contents.push({
+          role: turn.role,
+          parts: [{ text: turn.parts[0].text }],
+        });
+      }
+    }
+
+    // Must start with a user turn — if first turn is "model", remove it
+    while (contents.length > 0 && contents[0].role !== "user") {
+      contents.shift();
+    }
+
+    if (contents.length === 0) {
+      return NextResponse.json({
+        reply: "Hi! How can I help you today? 😊",
+      });
+    }
+
+    // ── 4. Call Gemini API ─────────────────────────────────────────────────
+    const requestBody = {
+      system_instruction: {
         parts: [{ text: SYSTEM_INSTRUCTION }],
       },
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: userMessage }],
-        },
-      ],
+      contents,
       generationConfig: {
         temperature: 0.7,
-        maxOutputTokens: 1024,
+        maxOutputTokens: 500,
+        topP: 0.9,
       },
     };
 
-    // 4. VERCEL FIX: Attach the key directly to the URL to prevent header-stripping
-    const urlWithKey = `${GEMINI_API_URL}?key=${apiKey}`;
-
-    const res = await fetch(urlWithKey, {
+    const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody),
     });
 
-    // 5. Verbose Error Logging for production debugging
+    // ── 5. Handle errors ───────────────────────────────────────────────────
     if (!res.ok) {
       const errText = await res.text();
-      console.error(`Gemini API error ${res.status}:`, errText);
-      return NextResponse.json(
-        { reply: `Google API Error ${res.status}. Check Vercel Server Logs.` },
-        { status: res.status },
+      console.error(
+        `Gemini API error ${res.status} (model: ${GEMINI_MODEL}):`,
+        errText,
       );
+
+      if (res.status === 429) {
+        return NextResponse.json({
+          reply:
+            "I'm receiving a lot of messages right now! Please try again in a moment, or email us at info@setupgram.com 😊",
+        });
+      }
+
+      return NextResponse.json({
+        reply: `I'm having trouble connecting right now. Please reach out to us at info@setupgram.com and we'll get back to you shortly!`,
+      });
     }
 
+    // ── 6. Parse response ──────────────────────────────────────────────────
     const data = await res.json();
 
     const candidate = data?.candidates?.[0];
     if (!candidate) {
-      console.error("No candidates in Gemini response:", data);
-      return NextResponse.json(
-        { reply: "I couldn't generate a response. Please try rephrasing!" },
-        { status: 500 },
+      console.error(
+        "No candidates in Gemini response:",
+        JSON.stringify(data).slice(0, 500),
       );
+      return NextResponse.json({
+        reply:
+          "I couldn't generate a response. Please try rephrasing, or email us at info@setupgram.com!",
+      });
     }
 
     if (candidate.finishReason === "SAFETY") {
@@ -154,16 +195,14 @@ export async function POST(req: Request) {
 
     const reply =
       candidate?.content?.parts?.[0]?.text?.trim() ||
-      "Sorry, I didn't catch that. Could you rephrase?";
+      "Sorry, I didn't catch that. Could you rephrase? Or feel free to email us at info@setupgram.com!";
 
     return NextResponse.json({ reply });
   } catch (error) {
     console.error("Chat route exception:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json(
-      { reply: `Server encountered an error: ${errorMessage}` },
-      { status: 500 },
-    );
+    return NextResponse.json({
+      reply:
+        "Something went wrong on my end! Please contact us at info@setupgram.com and we'll be happy to help. 🙏",
+    });
   }
 }
