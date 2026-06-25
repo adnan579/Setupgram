@@ -8,6 +8,7 @@ import Footer from "../components/Footer";
 import ThreeBackground from "../components/ThreeBackground";
 import Bizzua from "../components/Bizzua";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
 const spaceGrotesk = Space_Grotesk({
@@ -60,6 +61,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/* Vercel Web Analytics */}
         <Analytics />
+
+        {/* Vercel Speed Insights */}
+        <SpeedInsights />
       </body>
     </html>
   );
