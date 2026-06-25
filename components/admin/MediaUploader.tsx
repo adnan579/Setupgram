@@ -1,3 +1,5 @@
+/** @format */
+
 "use client";
 
 import { useState, useRef, useCallback } from "react";
@@ -37,8 +39,8 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
     accept === "image"
       ? "image/*"
       : accept === "video"
-      ? "video/*"
-      : "image/*,video/*";
+        ? "video/*"
+        : "image/*,video/*";
 
   const upload = useCallback(
     async (file: File) => {
@@ -49,7 +51,6 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
       const isVideo = file.type.startsWith("video/");
       const type = isVideo ? "video" : "image";
 
-      // Validate type
       if (accept === "image" && isVideo) {
         setError("Only images are allowed here.");
         setUploading(false);
@@ -61,27 +62,79 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
         return;
       }
 
+      // Client-side size check
+      const maxSize = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+      if (file.size > maxSize) {
+        setError(
+          `File too large. Max ${isVideo ? "50MB" : "10MB"}. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`,
+        );
+        setUploading(false);
+        return;
+      }
+
       try {
         const fd = new FormData();
         fd.append("file", file);
         fd.append("type", type);
 
         // Fake progress ticks while waiting
-        const ticker = setInterval(() => setProgress((p) => Math.min(p + 8, 85)), 400);
+        const ticker = setInterval(
+          () => setProgress((p) => Math.min(p + 5, 85)),
+          500,
+        );
 
-        const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
-        clearInterval(ticker);
+        let res: Response;
+        try {
+          res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+        } finally {
+          clearInterval(ticker);
+        }
+
+        setProgress(95);
+
+        // ── Parse response — always try to get JSON ──────────────────────────
+        let data: {
+          success: boolean;
+          message?: string;
+          url?: string;
+          publicId?: string;
+          type?: string;
+          width?: number;
+          height?: number;
+          format?: string;
+          bytes?: number;
+        };
+        try {
+          data = await res.json();
+        } catch {
+          // Non-JSON response (e.g. 413 Payload Too Large from Next.js)
+          if (res.status === 413) {
+            setError(
+              "File is too large for the server. Try a smaller image (under 8MB).",
+            );
+          } else {
+            setError(`Server error (${res.status}). Please try again.`);
+          }
+          setUploading(false);
+          setProgress(0);
+          return;
+        }
+
         setProgress(100);
 
-        const data = await res.json();
         if (!res.ok || !data.success) {
-          setError(data.message || "Upload failed.");
+          // Show the ACTUAL error from the server, not a generic message
+          setError(
+            data.message || `Upload failed (${res.status}). Please try again.`,
+          );
+          setUploading(false);
+          setProgress(0);
           return;
         }
 
         const media: UploadedMedia = {
-          url: data.url,
-          publicId: data.publicId,
+          url: data.url!,
+          publicId: data.publicId!,
           type,
           width: data.width,
           height: data.height,
@@ -91,14 +144,19 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
 
         setUploaded((prev) => [media, ...prev]);
         onInsert(media);
-      } catch {
-        setError("Network error. Please try again.");
+        setProgress(0);
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? `Network error: ${err.message}`
+            : "Network error. Please check your connection and try again.",
+        );
       } finally {
         setUploading(false);
         setProgress(0);
       }
     },
-    [accept, onInsert]
+    [accept, onInsert],
   );
 
   function handleFiles(files: FileList | null) {
@@ -153,9 +211,11 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
         {/* ── Upload Tab ── */}
         {tab === "upload" && (
           <div className="space-y-4">
-            {/* Drop zone */}
             <div
-              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragging(true);
+              }}
               onDragLeave={() => setDragging(false)}
               onDrop={handleDrop}
               onClick={() => !uploading && fileRef.current?.click()}
@@ -176,12 +236,29 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
               {uploading ? (
                 <div className="space-y-3">
                   <div className="w-10 h-10 mx-auto rounded-full bg-primary/20 flex items-center justify-center">
-                    <svg className="animate-spin w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    <svg
+                      className="animate-spin w-5 h-5 text-primary"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      />
                     </svg>
                   </div>
-                  <p className="text-sm text-gray-400">Uploading to Cloudinary…</p>
+                  <p className="text-sm text-gray-400">
+                    Uploading to Cloudinary…
+                  </p>
                   <div className="w-full max-w-xs mx-auto bg-white/5 rounded-full h-1.5">
                     <div
                       className="h-full bg-primary rounded-full transition-all duration-300"
@@ -193,13 +270,29 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
               ) : (
                 <div className="space-y-3">
                   <div className="w-12 h-12 mx-auto rounded-xl bg-white/5 flex items-center justify-center">
-                    <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    <svg
+                      className="w-6 h-6 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                      />
                     </svg>
                   </div>
                   <div>
                     <p className="text-sm text-white font-medium">
-                      Drop {accept === "image" ? "an image" : accept === "video" ? "a video" : "an image or video"} here
+                      Drop{" "}
+                      {accept === "image"
+                        ? "an image"
+                        : accept === "video"
+                          ? "a video"
+                          : "an image or video"}{" "}
+                      here
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
                       or <span className="text-primary">click to browse</span>
@@ -209,17 +302,29 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
                     {accept === "video"
                       ? "MP4, WebM, MOV up to 50MB"
                       : accept === "image"
-                      ? "JPG, PNG, WebP, GIF up to 10MB"
-                      : "Images up to 10MB · Videos up to 50MB"}
+                        ? "JPG, PNG, WebP, GIF up to 10MB"
+                        : "Images up to 10MB · Videos up to 50MB"}
                   </p>
                 </div>
               )}
             </div>
 
+            {/* Error — shows ACTUAL server error message */}
             {error && (
-              <p className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
-                {error}
-              </p>
+              <div className="flex items-start gap-2 text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-3">
+                <svg
+                  className="w-4 h-4 flex-shrink-0 mt-0.5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <span>{error}</span>
+              </div>
             )}
           </div>
         )}
@@ -227,7 +332,9 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
         {/* ── URL Tab ── */}
         {tab === "url" && (
           <div className="space-y-3">
-            <p className="text-xs text-gray-500">Paste a direct URL to an image or video hosted elsewhere.</p>
+            <p className="text-xs text-gray-500">
+              Paste a direct URL to an image or video hosted elsewhere.
+            </p>
             <div className="flex gap-2">
               <input
                 type="url"
@@ -248,10 +355,19 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
             {urlInput && (
               <div className="rounded-lg overflow-hidden border border-white/5 bg-white/[0.02] p-2">
                 {/\.(mp4|webm|ogg|mov)(\?|$)/i.test(urlInput) ? (
-                  <video src={urlInput} className="w-full max-h-40 rounded object-contain" controls />
+                  <video
+                    src={urlInput}
+                    className="w-full max-h-40 rounded object-contain"
+                    controls
+                  />
                 ) : (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={urlInput} alt="Preview" className="w-full max-h-40 rounded object-contain" onError={(e) => (e.currentTarget.style.display = "none")} />
+                  <img
+                    src={urlInput}
+                    alt="Preview"
+                    className="w-full max-h-40 rounded object-contain"
+                    onError={(e) => (e.currentTarget.style.display = "none")}
+                  />
                 )}
               </div>
             )}
@@ -264,7 +380,10 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
             {uploaded.length === 0 ? (
               <p className="text-center text-gray-600 text-sm py-8">
                 No uploads yet in this session.{" "}
-                <button onClick={() => setTab("upload")} className="text-primary hover:underline">
+                <button
+                  onClick={() => setTab("upload")}
+                  className="text-primary hover:underline"
+                >
                   Upload something
                 </button>
               </p>
@@ -279,16 +398,26 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
                   >
                     {m.type === "video" ? (
                       <div className="w-full h-full flex items-center justify-center bg-secondary/10">
-                        <svg className="w-8 h-8 text-secondary" fill="currentColor" viewBox="0 0 24 24">
+                        <svg
+                          className="w-8 h-8 text-secondary"
+                          fill="currentColor"
+                          viewBox="0 0 24 24"
+                        >
                           <path d="M8 5v14l11-7z" />
                         </svg>
                       </div>
                     ) : (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={m.url} alt="" className="w-full h-full object-cover" />
+                      <img
+                        src={m.url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
                     )}
                     <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <span className="text-xs text-dark font-bold bg-primary px-2 py-1 rounded">Insert</span>
+                      <span className="text-xs text-dark font-bold bg-primary px-2 py-1 rounded">
+                        Insert
+                      </span>
                     </div>
                   </button>
                 ))}

@@ -10,13 +10,40 @@ cloudinary.config({
 });
 
 export const runtime = "nodejs";
-export const maxDuration = 60; // allow up to 60s for large video uploads
+export const maxDuration = 60;
+
+// FIX: Override Next.js body size limit for this route specifically
+// This is the App Router way to disable the body size limit
+export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
+    // ── Validate Cloudinary env vars first ───────────────────────────────────
+    // This is the #1 silent failure — if any var is missing, Cloudinary
+    // accepts the request but returns an "Invalid Signature" or similar error
+    if (
+      !process.env.CLOUDINARY_CLOUD_NAME ||
+      !process.env.CLOUDINARY_API_KEY ||
+      !process.env.CLOUDINARY_API_SECRET
+    ) {
+      console.error("Missing Cloudinary env vars:", {
+        cloud_name: !!process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: !!process.env.CLOUDINARY_API_KEY,
+        api_secret: !!process.env.CLOUDINARY_API_SECRET,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Cloudinary is not configured. Please check CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in Vercel environment variables.",
+        },
+        { status: 500 },
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
-    const type = (formData.get("type") as string) || "image"; // "image" | "video"
+    const type = (formData.get("type") as string) || "image";
 
     if (!file) {
       return NextResponse.json(
@@ -25,42 +52,46 @@ export async function POST(request: Request) {
       );
     }
 
-    // Size limits: images 10MB, videos 50MB
+    // ── Size limits ──────────────────────────────────────────────────────────
     const maxSize = type === "video" ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
     if (file.size > maxSize) {
       return NextResponse.json(
         {
           success: false,
-          message: `File too large. Max ${type === "video" ? "50MB" : "10MB"}.`,
+          message: `File too large. Max ${type === "video" ? "50MB" : "10MB"}. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`,
         },
         { status: 400 },
       );
     }
 
-    // Convert File to base64 data URI for Cloudinary
+    // ── Convert to base64 ────────────────────────────────────────────────────
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     const base64 = buffer.toString("base64");
     const dataUri = `data:${file.type};base64,${base64}`;
 
-    // Use a loose type for upload options to avoid strict callback-type inference
-    const uploadOptions: any = {
+    // ── Upload to Cloudinary ─────────────────────────────────────────────────
+    const uploadOptions: Record<string, unknown> = {
       folder: "setupgram/blog",
       resource_type: type === "video" ? "video" : "image",
-      // Auto quality + format for images
       ...(type === "image" && {
         quality: "auto",
         fetch_format: "auto",
         transformation: [{ width: 1600, crop: "limit" }],
       }),
-      // Video: compress but keep quality
       ...(type === "video" && {
         quality: "auto",
         transformation: [{ width: 1280, crop: "limit" }],
       }),
     };
 
+    console.log(
+      `Uploading ${type} to Cloudinary: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`,
+    );
+
     const result = await cloudinary.uploader.upload(dataUri, uploadOptions);
+
+    console.log("Cloudinary upload success:", result.public_id);
 
     return NextResponse.json({
       success: true,
@@ -72,12 +103,33 @@ export async function POST(request: Request) {
       format: result.format,
       bytes: result.bytes,
     });
-  } catch (error) {
+  } catch (error: unknown) {
+    // ── Detailed error logging ───────────────────────────────────────────────
     console.error("Cloudinary upload error:", error);
-    return NextResponse.json(
-      { success: false, message: "Upload failed. Please try again." },
-      { status: 500 },
-    );
+
+    // Cloudinary SDK errors have a specific shape
+    type CloudinaryError = {
+      http_code?: number;
+      message?: string;
+      error?: { message: string };
+    };
+    const err = error as CloudinaryError;
+
+    let message = "Upload failed. Please try again.";
+
+    if (err?.http_code === 401 || err?.message?.includes("Invalid")) {
+      message =
+        "Cloudinary authentication failed. Please verify your API Key and API Secret in Vercel environment variables.";
+    } else if (err?.http_code === 420 || err?.message?.includes("limit")) {
+      message =
+        "Cloudinary upload limit reached. Check your Cloudinary plan usage.";
+    } else if (err?.message) {
+      message = `Upload failed: ${err.message}`;
+    } else if (err?.error?.message) {
+      message = `Upload failed: ${err.error.message}`;
+    }
+
+    return NextResponse.json({ success: false, message }, { status: 500 });
   }
 }
 
