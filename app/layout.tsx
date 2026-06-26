@@ -24,9 +24,26 @@ export const metadata: Metadata = {
   description:
     "SetupGram is a cutting-edge tech solution provider and business consulting firm helping businesses grow online with AI, custom apps, CRM, advertising, and digital marketing.",
   keywords: [
-    "AI chatbot", "app development", "CRM", "digital marketing",
-    "advertising", "Google Ads", "Meta Ads", "business consulting", "SetupGram",
+    "AI chatbot",
+    "app development",
+    "CRM",
+    "digital marketing",
+    "advertising",
+    "Google Ads",
+    "Meta Ads",
+    "business consulting",
+    "SetupGram",
   ],
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon.png", type: "image/png" },
+    ],
+    apple: "/apple-icon.png",
+    shortcut: "/favicon.ico",
+  },
+  manifest: "/manifest.json",
   openGraph: {
     title: "SetupGram Infotech Solutions",
     description: "Perfect Place For Business Solutions.",
@@ -34,7 +51,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" className="scroll-smooth">
       <body
