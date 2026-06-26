@@ -4,16 +4,9 @@ const nextConfig = {
   experimental: {
     // Allows multiple root layouts (admin has its own)
   },
-  // FIX: Increase body size limit for Cloudinary image/video uploads
-  // Default is 4MB which is too small for blog images
-  // Images up to 10MB + base64 overhead (~33%) = need ~14MB
-  // Videos up to 50MB + base64 overhead = need ~70MB
-  api: {
-    bodyParser: {
-      sizeLimit: "100mb",
-    },
-    responseLimit: false,
-  },
+  // NOTE: api.bodyParser here is Pages Router config ONLY — ignored in App Router.
+  // File uploads now go directly from the browser to Cloudinary (signed upload).
+  // This means there is NO server-side body size limit to worry about.
 };
 
 module.exports = nextConfig;

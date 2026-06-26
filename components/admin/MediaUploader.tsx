@@ -34,6 +34,7 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
   const [urlInput, setUrlInput] = useState("");
   const [tab, setTab] = useState<"upload" | "url" | "library">("upload");
   const fileRef = useRef<HTMLInputElement>(null);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
 
   const acceptAttr =
     accept === "image"
@@ -46,10 +47,11 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
     async (file: File) => {
       setError("");
       setUploading(true);
-      setProgress(10);
+      setProgress(0);
 
       const isVideo = file.type.startsWith("video/");
-      const type = isVideo ? "video" : "image";
+      const type = isVideo ? "image" : "image"; // Cloudinary resource_type
+      const resourceType = isVideo ? "video" : "image";
 
       if (accept === "image" && isVideo) {
         setError("Only images are allowed here.");
@@ -63,97 +65,119 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
       }
 
       // Client-side size check
-      const maxSize = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+      const maxSize = isVideo ? 100 * 1024 * 1024 : 20 * 1024 * 1024;
       if (file.size > maxSize) {
         setError(
-          `File too large. Max ${isVideo ? "50MB" : "10MB"}. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`,
+          `File too large. Max ${isVideo ? "100MB" : "20MB"}. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`,
         );
         setUploading(false);
         return;
       }
 
       try {
-        const fd = new FormData();
-        fd.append("file", file);
-        fd.append("type", type);
-
-        // Fake progress ticks while waiting
-        const ticker = setInterval(
-          () => setProgress((p) => Math.min(p + 5, 85)),
-          500,
-        );
-
-        let res: Response;
-        try {
-          res = await fetch("/api/admin/upload", { method: "POST", body: fd });
-        } finally {
-          clearInterval(ticker);
-        }
-
-        setProgress(95);
-
-        // ── Parse response — always try to get JSON ──────────────────────────
-        let data: {
-          success: boolean;
-          message?: string;
-          url?: string;
-          publicId?: string;
-          type?: string;
-          width?: number;
-          height?: number;
-          format?: string;
-          bytes?: number;
-        };
-        try {
-          data = await res.json();
-        } catch {
-          // Non-JSON response (e.g. 413 Payload Too Large from Next.js)
-          if (res.status === 413) {
-            setError(
-              "File is too large for the server. Try a smaller image (under 8MB).",
-            );
-          } else {
-            setError(`Server error (${res.status}). Please try again.`);
-          }
-          setUploading(false);
-          setProgress(0);
-          return;
-        }
-
-        setProgress(100);
-
-        if (!res.ok || !data.success) {
-          // Show the ACTUAL error from the server, not a generic message
+        // Step 1: Get a signed upload signature from our server (tiny request)
+        const sigRes = await fetch("/api/admin/upload-signature");
+        if (!sigRes.ok) {
+          const sigData = await sigRes.json().catch(() => ({}));
           setError(
-            data.message || `Upload failed (${res.status}). Please try again.`,
+            sigData.message ||
+              "Failed to get upload credentials. Check Cloudinary env vars.",
           );
           setUploading(false);
-          setProgress(0);
           return;
         }
 
-        const media: UploadedMedia = {
-          url: data.url!,
-          publicId: data.publicId!,
-          type,
-          width: data.width,
-          height: data.height,
-          format: data.format,
-          bytes: data.bytes,
-        };
+        const { timestamp, signature, folder, cloudName, apiKey } =
+          await sigRes.json();
 
-        setUploaded((prev) => [media, ...prev]);
-        onInsert(media);
-        setProgress(0);
+        if (!cloudName || !apiKey || !signature) {
+          setError(
+            "Invalid upload credentials received from server. Check Cloudinary configuration.",
+          );
+          setUploading(false);
+          return;
+        }
+
+        // Step 2: Upload directly from browser to Cloudinary
+        // This completely bypasses Vercel's body size limit
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("api_key", apiKey);
+        formData.append("timestamp", String(timestamp));
+        formData.append("signature", signature);
+        formData.append("folder", folder);
+
+        // Image transformations
+        if (!isVideo) {
+          formData.append("transformation", "c_limit,w_1600,q_auto,f_auto");
+        } else {
+          formData.append("transformation", "c_limit,w_1280,q_auto");
+        }
+
+        const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`;
+
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhrRef.current = xhr;
+
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              const pct = Math.round((e.loaded / e.total) * 95);
+              setProgress(pct);
+            }
+          };
+
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const result = JSON.parse(xhr.responseText);
+                setProgress(100);
+
+                const media: UploadedMedia = {
+                  url: result.secure_url,
+                  publicId: result.public_id,
+                  type: isVideo ? "video" : "image",
+                  width: result.width,
+                  height: result.height,
+                  format: result.format,
+                  bytes: result.bytes,
+                };
+
+                setUploaded((prev) => [media, ...prev]);
+                onInsert(media);
+                resolve();
+              } catch {
+                reject(new Error("Invalid response from Cloudinary"));
+              }
+            } else {
+              try {
+                const errData = JSON.parse(xhr.responseText);
+                reject(
+                  new Error(
+                    errData?.error?.message ||
+                      `Cloudinary returned ${xhr.status}`,
+                  ),
+                );
+              } catch {
+                reject(new Error(`Upload failed with status ${xhr.status}`));
+              }
+            }
+          };
+
+          xhr.onerror = () => reject(new Error("Network error during upload"));
+          xhr.onabort = () => reject(new Error("Upload cancelled"));
+
+          xhr.open("POST", cloudinaryUrl);
+          xhr.send(formData);
+        });
       } catch (err) {
-        setError(
-          err instanceof Error
-            ? `Network error: ${err.message}`
-            : "Network error. Please check your connection and try again.",
-        );
+        const message =
+          err instanceof Error ? err.message : "Upload failed. Please retry.";
+        setError(message);
       } finally {
         setUploading(false);
-        setProgress(0);
+        xhrRef.current = null;
+        setTimeout(() => setProgress(0), 1000);
       }
     },
     [accept, onInsert],
@@ -168,6 +192,12 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
     e.preventDefault();
     setDragging(false);
     handleFiles(e.dataTransfer.files);
+  }
+
+  function handleCancel() {
+    xhrRef.current?.abort();
+    setUploading(false);
+    setProgress(0);
   }
 
   function handleUrlInsert() {
@@ -257,7 +287,7 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
                     </svg>
                   </div>
                   <p className="text-sm text-gray-400">
-                    Uploading to Cloudinary…
+                    Uploading directly to Cloudinary…
                   </p>
                   <div className="w-full max-w-xs mx-auto bg-white/5 rounded-full h-1.5">
                     <div
@@ -266,6 +296,15 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
                     />
                   </div>
                   <p className="text-xs text-gray-600">{progress}%</p>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCancel();
+                    }}
+                    className="text-xs text-red-400 hover:text-red-300 transition-colors pointer-events-auto"
+                  >
+                    Cancel
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -295,21 +334,25 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
                       here
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      or <span className="text-primary">click to browse</span>
+                      or{" "}
+                      <span className="text-primary">click to browse</span>
                     </p>
                   </div>
                   <p className="text-xs text-gray-600">
                     {accept === "video"
-                      ? "MP4, WebM, MOV up to 50MB"
+                      ? "MP4, WebM, MOV up to 100MB"
                       : accept === "image"
-                        ? "JPG, PNG, WebP, GIF up to 10MB"
-                        : "Images up to 10MB · Videos up to 50MB"}
+                        ? "JPG, PNG, WebP, GIF up to 20MB"
+                        : "Images up to 20MB · Videos up to 100MB"}
+                  </p>
+                  <p className="text-xs text-gray-700">
+                    Uploads go directly to Cloudinary — no server size limits
                   </p>
                 </div>
               )}
             </div>
 
-            {/* Error — shows ACTUAL server error message */}
+            {/* Error */}
             {error && (
               <div className="flex items-start gap-2 text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-3">
                 <svg
