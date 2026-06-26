@@ -3,37 +3,47 @@
 import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    if (
-      !process.env.CLOUDINARY_CLOUD_NAME ||
-      !process.env.CLOUDINARY_API_KEY ||
-      !process.env.CLOUDINARY_API_SECRET
-    ) {
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+    if (!cloudName || !apiKey || !apiSecret) {
+      const missing = [
+        !cloudName && "CLOUDINARY_CLOUD_NAME",
+        !apiKey && "CLOUDINARY_API_KEY",
+        !apiSecret && "CLOUDINARY_API_SECRET",
+      ]
+        .filter(Boolean)
+        .join(", ");
+      console.error("Missing Cloudinary env vars:", missing);
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Cloudinary is not configured. Check CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in Vercel environment variables.",
+          message: `Missing Cloudinary environment variables: ${missing}. Add them in Vercel → Project Settings → Environment Variables.`,
         },
         { status: 500 },
       );
     }
 
-    const timestamp = Math.round(new Date().getTime() / 1000);
+    cloudinary.config({
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret,
+    });
+
+    const timestamp = Math.round(Date.now() / 1000);
     const folder = "setupgram/blog";
 
+    // Sign ONLY the params we actually send in the upload FormData
+    // transformation must NOT be included — Cloudinary ignores string transformations
+    // in direct upload and they break the signature check
     const signature = cloudinary.utils.api_sign_request(
       { timestamp, folder },
-      process.env.CLOUDINARY_API_SECRET!,
+      apiSecret,
     );
 
     return NextResponse.json({
@@ -41,8 +51,8 @@ export async function GET() {
       timestamp,
       signature,
       folder,
-      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
-      apiKey: process.env.CLOUDINARY_API_KEY,
+      cloudName,
+      apiKey,
     });
   } catch (error) {
     console.error("Signature generation error:", error);

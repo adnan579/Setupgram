@@ -50,7 +50,6 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
       setProgress(0);
 
       const isVideo = file.type.startsWith("video/");
-      const type = isVideo ? "image" : "image"; // Cloudinary resource_type
       const resourceType = isVideo ? "video" : "image";
 
       if (accept === "image" && isVideo) {
@@ -64,55 +63,70 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
         return;
       }
 
-      // Client-side size check
       const maxSize = isVideo ? 100 * 1024 * 1024 : 20 * 1024 * 1024;
       if (file.size > maxSize) {
         setError(
-          `File too large. Max ${isVideo ? "100MB" : "20MB"}. Your file is ${(file.size / 1024 / 1024).toFixed(1)}MB.`,
+          `File too large. Max ${isVideo ? "100MB" : "20MB"}. Your file is ${(
+            file.size /
+            1024 /
+            1024
+          ).toFixed(1)}MB.`,
         );
         setUploading(false);
         return;
       }
 
       try {
-        // Step 1: Get a signed upload signature from our server (tiny request)
-        const sigRes = await fetch("/api/admin/upload-signature");
-        if (!sigRes.ok) {
-          const sigData = await sigRes.json().catch(() => ({}));
+        // ── Step 1: Get signed credentials from our server ──────────────────
+        let sigPayload: {
+          timestamp: number;
+          signature: string;
+          folder: string;
+          cloudName: string;
+          apiKey: string;
+        };
+
+        try {
+          const sigRes = await fetch("/api/admin/upload-signature");
+          const sigData = await sigRes.json();
+
+          if (!sigRes.ok || !sigData.success) {
+            setError(
+              sigData.message ||
+                "Could not get upload credentials from server. Check Cloudinary env vars in Vercel.",
+            );
+            setUploading(false);
+            return;
+          }
+
+          if (!sigData.cloudName || !sigData.apiKey || !sigData.signature) {
+            setError(
+              "Server returned incomplete credentials. Verify CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET in Vercel environment variables.",
+            );
+            setUploading(false);
+            return;
+          }
+
+          sigPayload = sigData;
+        } catch {
           setError(
-            sigData.message ||
-              "Failed to get upload credentials. Check Cloudinary env vars.",
+            "Failed to reach signature endpoint. Check your internet connection or Vercel deployment.",
           );
           setUploading(false);
           return;
         }
 
-        const { timestamp, signature, folder, cloudName, apiKey } =
-          await sigRes.json();
+        const { timestamp, signature, folder, cloudName, apiKey } = sigPayload;
 
-        if (!cloudName || !apiKey || !signature) {
-          setError(
-            "Invalid upload credentials received from server. Check Cloudinary configuration.",
-          );
-          setUploading(false);
-          return;
-        }
-
-        // Step 2: Upload directly from browser to Cloudinary
-        // This completely bypasses Vercel's body size limit
+        // ── Step 2: Upload directly from browser → Cloudinary ───────────────
+        // IMPORTANT: Only include params that were signed (timestamp + folder).
+        // Adding extra params (like transformation) breaks the signature check.
         const formData = new FormData();
         formData.append("file", file);
         formData.append("api_key", apiKey);
         formData.append("timestamp", String(timestamp));
         formData.append("signature", signature);
         formData.append("folder", folder);
-
-        // Image transformations
-        if (!isVideo) {
-          formData.append("transformation", "c_limit,w_1600,q_auto,f_auto");
-        } else {
-          formData.append("transformation", "c_limit,w_1280,q_auto");
-        }
 
         const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`;
 
@@ -131,8 +145,15 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
             if (xhr.status >= 200 && xhr.status < 300) {
               try {
                 const result = JSON.parse(xhr.responseText);
+                if (!result.secure_url) {
+                  reject(
+                    new Error(
+                      "Cloudinary returned no URL. Check your Cloudinary plan/account.",
+                    ),
+                  );
+                  return;
+                }
                 setProgress(100);
-
                 const media: UploadedMedia = {
                   url: result.secure_url,
                   publicId: result.public_id,
@@ -142,7 +163,6 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
                   format: result.format,
                   bytes: result.bytes,
                 };
-
                 setUploaded((prev) => [media, ...prev]);
                 onInsert(media);
                 resolve();
@@ -150,21 +170,24 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
                 reject(new Error("Invalid response from Cloudinary"));
               }
             } else {
+              // HTTP error from Cloudinary (e.g. 401 bad signature, 400 bad request)
+              let errMsg = `Cloudinary error ${xhr.status}`;
               try {
                 const errData = JSON.parse(xhr.responseText);
-                reject(
-                  new Error(
-                    errData?.error?.message ||
-                      `Cloudinary returned ${xhr.status}`,
-                  ),
-                );
+                errMsg = errData?.error?.message || errMsg;
               } catch {
-                reject(new Error(`Upload failed with status ${xhr.status}`));
+                // keep default
               }
+              reject(new Error(errMsg));
             }
           };
 
-          xhr.onerror = () => reject(new Error("Network error during upload"));
+          xhr.onerror = () =>
+            reject(
+              new Error(
+                "Network error — could not reach Cloudinary. Check that your Cloudinary Cloud Name is correct in Vercel env vars.",
+              ),
+            );
           xhr.onabort = () => reject(new Error("Upload cancelled"));
 
           xhr.open("POST", cloudinaryUrl);
@@ -177,7 +200,7 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
       } finally {
         setUploading(false);
         xhrRef.current = null;
-        setTimeout(() => setProgress(0), 1000);
+        setTimeout(() => setProgress(0), 1500);
       }
     },
     [accept, onInsert],
@@ -287,7 +310,7 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
                     </svg>
                   </div>
                   <p className="text-sm text-gray-400">
-                    Uploading directly to Cloudinary…
+                    Uploading to Cloudinary…
                   </p>
                   <div className="w-full max-w-xs mx-auto bg-white/5 rounded-full h-1.5">
                     <div
@@ -334,8 +357,7 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
                       here
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      or{" "}
-                      <span className="text-primary">click to browse</span>
+                      or <span className="text-primary">click to browse</span>
                     </p>
                   </div>
                   <p className="text-xs text-gray-600">
@@ -344,9 +366,6 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
                       : accept === "image"
                         ? "JPG, PNG, WebP, GIF up to 20MB"
                         : "Images up to 20MB · Videos up to 100MB"}
-                  </p>
-                  <p className="text-xs text-gray-700">
-                    Uploads go directly to Cloudinary — no server size limits
                   </p>
                 </div>
               )}
@@ -436,7 +455,9 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
                   <button
                     key={i}
                     onClick={() => onInsert(m)}
-                    title={`Click to insert • ${m.format?.toUpperCase()} • ${m.bytes ? formatBytes(m.bytes) : ""}`}
+                    title={`Click to insert • ${m.format?.toUpperCase()} • ${
+                      m.bytes ? formatBytes(m.bytes) : ""
+                    }`}
                     className="relative group aspect-square rounded-lg overflow-hidden border border-white/5 hover:border-primary/40 transition-all bg-white/[0.02]"
                   >
                     {m.type === "video" ? (
