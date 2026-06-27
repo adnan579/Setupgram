@@ -9,6 +9,7 @@ import ThreeBackground from "../components/ThreeBackground";
 import Bizzua from "../components/Bizzua";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import Script from "next/script"; // ← ADD THIS IMPORT
 
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
 const spaceGrotesk = Space_Grotesk({
@@ -58,6 +59,21 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="scroll-smooth">
+      <head>
+        {/* ── Google Analytics ── */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-46M4BN1HJ9"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-46M4BN1HJ9');
+          `}
+        </Script>
+      </head>
       <body
         className={`${outfit.variable} ${spaceGrotesk.variable} font-sans antialiased selection:bg-primary selection:text-dark`}
       >
@@ -65,25 +81,12 @@ export default function RootLayout({
         <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/20 blur-[120px] pointer-events-none z-0" />
         <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-secondary/20 blur-[120px] pointer-events-none z-0" />
 
-        {/* 3D WebGL Particle Background */}
         <ThreeBackground />
-
-        {/* Navigation */}
         <NavBar />
-
-        {/* Page Content */}
         <main className="relative z-10">{children}</main>
-
-        {/* Footer */}
         <Footer />
-
-        {/* Bizzua AI Assistant — shown on all public pages */}
         <Bizzua />
-
-        {/* Vercel Web Analytics */}
         <Analytics />
-
-        {/* Vercel Speed Insights */}
         <SpeedInsights />
       </body>
     </html>
