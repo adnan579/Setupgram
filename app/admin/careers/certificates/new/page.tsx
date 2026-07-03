@@ -1,6 +1,6 @@
 /** @format */
 import type { Metadata } from "next";
-import CertificateEditor from "../../../../components/admin/CertificateEditor";
+import CertificateEditor from "../../../../../components/admin/CertificateEditor";
 
 export const metadata: Metadata = { title: "Issue Certificate" };
 

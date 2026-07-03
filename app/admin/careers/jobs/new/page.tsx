@@ -1,6 +1,6 @@
 /** @format */
 import type { Metadata } from "next";
-import JobEditor from "../../../../components/admin/JobEditor";
+import JobEditor from "../../../../../components/admin/JobEditor";
 
 export const metadata: Metadata = { title: "New Job Posting" };
 
