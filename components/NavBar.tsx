@@ -11,6 +11,7 @@ const navLinks = [
   { href: "/about", label: "ABOUT" },
   { href: "/#services", label: "SERVICES" },
   { href: "/#consulting", label: "CONSULTING" },
+  { href: "/career", label: "CAREERS" },
 ];
 
 export default function NavBar() {
@@ -104,7 +105,9 @@ export default function NavBar() {
               key={href}
               href={href}
               className={`text-sm font-semibold tracking-wide hover:text-primary transition-colors py-1 ${
-                pathname === href && !href.includes("#") ? "text-primary" : "text-white"
+                pathname === href && !href.includes("#")
+                  ? "text-primary"
+                  : "text-white"
               }`}
             >
               {label}
