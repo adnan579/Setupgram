@@ -1,4 +1,5 @@
 /** @format */
+import { checkRateLimit, getClientIp } from "../../../../lib/rateLimit";
 import { NextResponse } from "next/server";
 import { getDb } from "../../../../lib/mongodb";
 import { Resend } from "resend";
@@ -7,6 +8,17 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request: Request) {
   try {
+        const ip = getClientIp(request);
+    const { allowed, retryAfterSeconds } = await checkRateLimit(`careers-apply:${ip}`, 5, 10 * 60 * 1000);
+    if (!allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Too many applications submitted. Please try again in ${Math.ceil(retryAfterSeconds / 60)} minute(s).`,
+        },
+        { status: 429 },
+      );
+    }
     const body = await request.json();
     const {
       jobId,
