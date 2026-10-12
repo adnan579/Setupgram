@@ -75,10 +75,10 @@ export async function verifySessionToken(token: string | undefined | null): Prom
     const key = await getHmacKey();
     const signature = fromBase64Url(sigB64);
 
-    const signatureBuffer = signature.buffer.slice(
-      signature.byteOffset,
-      signature.byteOffset + signature.byteLength
-    );
+    // Use a standalone ArrayBuffer so the Web Crypto API receives an
+    // ArrayBuffer rather than a potentially shared ArrayBuffer view.
+    const signatureBuffer = new ArrayBuffer(signature.byteLength);
+    new Uint8Array(signatureBuffer).set(signature);
 
     const valid = await crypto.subtle.verify(
       "HMAC",
