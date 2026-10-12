@@ -3,11 +3,24 @@
 import { NextResponse } from "next/server";
 import { getDb } from "../../../lib/mongodb";
 import { Resend } from "resend";
+import { checkRateLimit, getClientIp } from "../../../lib/rateLimit";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
+    const { allowed, retryAfterSeconds } = await checkRateLimit(`contact:${ip}`, 5, 10 * 60 * 1000);
+    if (!allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Too many submissions. Please try again in ${Math.ceil(retryAfterSeconds / 60)} minute(s).`,
+        },
+        { status: 429 },
+      );
+    }
+
     const body = await request.json();
     const { name, email, phone, service, message } = body;
 
@@ -28,7 +41,6 @@ export async function POST(request: Request) {
 
     const db = await getDb();
 
-    // 1. Insert lead into MongoDB
     const lead = {
       name,
       email,
@@ -40,7 +52,6 @@ export async function POST(request: Request) {
     };
     await db.collection("leads").insertOne(lead);
 
-    // 2. Send notification email via Resend
     await resend.emails.send({
       from: "SetupGram <onboarding@resend.dev>",
       to: "info@setupgram.com",
@@ -64,10 +75,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(
-      {
-        success: true,
-        message: "Message received. We'll be in touch shortly.",
-      },
+      { success: true, message: "Message received. We'll be in touch shortly." },
       { status: 200 },
     );
   } catch (error) {
