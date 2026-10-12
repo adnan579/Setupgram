@@ -65,23 +65,33 @@ export async function createSessionToken(): Promise<string> {
  */
 export async function verifySessionToken(token: string | undefined | null): Promise<boolean> {
   if (!token) return false;
+
   const parts = token.split(".");
   if (parts.length !== 2) return false;
+
   const [payloadB64, sigB64] = parts;
 
   try {
     const key = await getHmacKey();
     const signature = fromBase64Url(sigB64);
+
+    const signatureBuffer = signature.buffer.slice(
+      signature.byteOffset,
+      signature.byteOffset + signature.byteLength
+    );
+
     const valid = await crypto.subtle.verify(
       "HMAC",
       key,
-      signature,
+      signatureBuffer,
       new TextEncoder().encode(payloadB64)
     );
+
     if (!valid) return false;
 
     const payload = JSON.parse(new TextDecoder().decode(fromBase64Url(payloadB64)));
     const now = Math.floor(Date.now() / 1000);
+
     return typeof payload.exp === "number" && payload.exp >= now;
   } catch {
     return false;
