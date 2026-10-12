@@ -15,19 +15,14 @@ function getSecret(): string {
   return secret;
 }
 
-function toBase64Url(bytes: Uint8Array): string {
-  let binary = "";
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function fromBase64Url(b64url: string): Uint8Array {
+function fromBase64Url(b64url: string) {
   const padded = b64url.replace(/-/g, "+").replace(/_/g, "/").padEnd(
     b64url.length + ((4 - (b64url.length % 4)) % 4),
     "="
   );
   const binary = atob(padded);
-  const bytes = new Uint8Array(binary.length);
+  // Explicitly back the array with a real ArrayBuffer (not SharedArrayBuffer)
+  const bytes = new Uint8Array(new ArrayBuffer(binary.length));
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes;
 }
