@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ApplicationStatusSelect from "./ApplicationStatusSelect";
+import { safeHttpsUrl } from "../../../../lib/validate";
 
 type Application = {
   _id: string;
@@ -174,30 +175,35 @@ export default function ApplicationsTable({
                     </p>
                     <p className="text-gray-400">
                       LinkedIn:{" "}
-                      {a.linkedin ? (
+                      {safeHttpsUrl(a.linkedin) ? (
                         <a
-                          href={a.linkedin}
+                          href={safeHttpsUrl(a.linkedin)}
                           target="_blank"
                           rel="noreferrer"
                           className="text-primary hover:underline"
                         >
                           {a.linkedin}
                         </a>
+                      ) : a.linkedin ? (
+                        // Not a valid https link: show as plain text, never as a clickable link
+                        <span className="text-white break-all">{a.linkedin}</span>
                       ) : (
                         "—"
                       )}
                     </p>
                     <p className="text-gray-400">
                       Resume:{" "}
-                      {a.resumeUrl ? (
+                      {safeHttpsUrl(a.resumeUrl) ? (
                         <a
-                          href={a.resumeUrl}
+                          href={safeHttpsUrl(a.resumeUrl)}
                           target="_blank"
                           rel="noreferrer"
                           className="text-primary hover:underline"
                         >
                           View Resume
                         </a>
+                      ) : a.resumeUrl ? (
+                        <span className="text-red-400">Invalid link (blocked)</span>
                       ) : (
                         "—"
                       )}
