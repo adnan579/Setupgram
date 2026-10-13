@@ -32,7 +32,7 @@ const team = [
     role: "Co-Founder & Strategy Lead",
     bio: "Former McKinsey consultant turned tech entrepreneur, specializing in digital transformation roadmaps.",
     accent: "secondary",
-    initial: "S",
+    initial: "M",
   },
   {
     name: "Dev Nair",

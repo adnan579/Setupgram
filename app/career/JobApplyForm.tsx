@@ -58,10 +58,11 @@ export default function JobApplyForm({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const form = e.currentTarget;
     setState("loading");
     setErrorMsg("");
 
-    const formData = new FormData(e.currentTarget);
+    const formData = new FormData(form);
     const body = {
       jobId,
       jobTitle,
@@ -73,23 +74,33 @@ export default function JobApplyForm({
       coverMessage: formData.get("coverMessage"),
     };
 
+    const fallback = `Something went wrong. Please email your resume directly to ${applyEmail}.`;
+
+    let res: Response;
     try {
-      const res = await fetch("/api/careers/apply", {
+      res = await fetch("/api/careers/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error("Server error");
-      setState("success");
-      (e.target as HTMLFormElement).reset();
-      setResumeUrl("");
-      setResumeName("");
     } catch {
       setState("error");
-      setErrorMsg(
-        `Something went wrong. Please email your resume directly to ${applyEmail}.`,
-      );
+      setErrorMsg("Network error. Please check your connection and try again.");
+      return;
     }
+
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.success) {
+      setState("error");
+      // Show the server's message for 4xx (validation, rate limit); generic for 5xx.
+      setErrorMsg(res.status >= 500 ? fallback : data?.message || fallback);
+      return;
+    }
+
+    setState("success");
+    form.reset();
+    setResumeUrl("");
+    setResumeName("");
   }
 
   if (state === "success") {
@@ -123,7 +134,7 @@ export default function JobApplyForm({
       <h3 className="text-lg font-bold text-white mb-1">Apply for this role</h3>
       <p className="text-xs text-gray-500 mb-5">Takes less than 2 minutes.</p>
 
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-xs font-medium text-gray-400 mb-1.5">
             Full Name *

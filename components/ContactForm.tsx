@@ -12,10 +12,11 @@ export default function ContactForm() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const form = e.currentTarget;
     setState("loading");
     setErrorMsg("");
 
-    const formData = new FormData(e.currentTarget);
+    const formData = new FormData(form);
     const body = {
       name: formData.get("name"),
       email: formData.get("email"),
@@ -24,21 +25,31 @@ export default function ContactForm() {
       message: formData.get("message"),
     };
 
+    const fallback = "Something went wrong. Please try again or email us directly.";
+
+    let res: Response;
     try {
-      const res = await fetch("/api/contact", {
+      res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-
-      if (!res.ok) throw new Error("Server error");
-
-      setState("success");
-      (e.target as HTMLFormElement).reset();
     } catch {
       setState("error");
-      setErrorMsg("Something went wrong. Please try again or email us directly.");
+      setErrorMsg("Network error. Please check your connection and try again.");
+      return;
     }
+
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.success) {
+      setState("error");
+      // Show the server's message for 4xx (validation, rate limit); generic for 5xx.
+      setErrorMsg(res.status >= 500 ? fallback : data?.message || fallback);
+      return;
+    }
+
+    setState("success");
+    form.reset();
   }
 
   if (state === "success") {
@@ -67,7 +78,7 @@ export default function ContactForm() {
     <div className="glass-panel rounded-2xl p-8">
       <h2 className="text-xl font-bold text-white mb-6">Send a Message</h2>
 
-      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+      <form onSubmit={handleSubmit} className="space-y-5">
         {/* Name */}
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-gray-400 mb-2">

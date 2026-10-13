@@ -32,6 +32,7 @@ export default async function EditBlogPage({
     content: post.content || "",
     slug: post.slug || "",
     status: (post.status as "DRAFT" | "PUBLISHED") || "DRAFT",
+    coverImage: post.coverImage || "",
     metaTitle: post.metaTitle || "",
     metaDescription: post.metaDescription || "",
     metaKeywords: post.metaKeywords || "",

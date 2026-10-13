@@ -3,6 +3,7 @@
 import { useState, FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { safeRedirectPath } from "../../lib/validate";
 
 export default function LoginForm() {
   const [password, setPassword] = useState("");
@@ -22,14 +23,18 @@ export default function LoginForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
       });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setError("Invalid password. Please try again.");
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) {
+        setError(
+          res.status === 429
+            ? data?.message || "Too many attempts. Please wait and try again."
+            : "Invalid password. Please try again.",
+        );
         setPassword("");
         return;
       }
-      const from = searchParams.get("from") || "/admin";
-      router.push(from);
+      // Only same-site relative paths are allowed (prevents open redirects).
+      router.push(safeRedirectPath(searchParams.get("from")));
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
