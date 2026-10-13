@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "../../../../../lib/mongodb";
+import { revalidateCertificates } from "../../../../../lib/revalidate";
 
 export async function PUT(
   request: Request,
@@ -62,6 +63,7 @@ export async function PUT(
     const result = await db
       .collection("certificates")
       .updateOne({ _id: new ObjectId(params.id) }, { $set: updateFields });
+    revalidateCertificates();
     if (result.matchedCount === 0) {
       return NextResponse.json(
         { success: false, message: "Certificate not found." },
@@ -86,6 +88,7 @@ export async function DELETE(
     await db
       .collection("certificates")
       .deleteOne({ _id: new ObjectId(params.id) });
+    revalidateCertificates();
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json(

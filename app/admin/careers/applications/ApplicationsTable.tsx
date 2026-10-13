@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ApplicationStatusSelect from "./ApplicationStatusSelect";
 import { safeHttpsUrl } from "../../../../lib/validate";
+import { formatDateShort as fmt } from "../../../../lib/utils";
 
 type Application = {
   _id: string;
@@ -19,14 +20,6 @@ type Application = {
   status: "NEW" | "REVIEWED" | "SHORTLISTED" | "REJECTED" | "HIRED";
   createdAt: string;
 };
-
-function fmt(d: string) {
-  return new Date(d).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 export default function ApplicationsTable({
   applications: initial,

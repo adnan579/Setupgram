@@ -2,11 +2,17 @@
 
 import { NextResponse } from "next/server";
 import { getDb } from "../../../../lib/mongodb";
+import { revalidateBlogs } from "../../../../lib/revalidate";
 
 export async function GET() {
   try {
     const db = await getDb();
-    const posts = await db.collection("blogs").find({}).sort({ createdAt: -1 }).toArray();
+    // Exclude the (large) HTML body from list responses
+    const posts = await db
+      .collection("blogs")
+      .find({}, { projection: { content: 0 } })
+      .sort({ createdAt: -1 })
+      .toArray();
     return NextResponse.json({ success: true, posts });
   } catch {
     return NextResponse.json({ success: false, message: "Server error." }, { status: 500 });
@@ -54,6 +60,7 @@ export async function POST(request: Request) {
     };
 
     const result = await db.collection("blogs").insertOne(post);
+    revalidateBlogs();
     return NextResponse.json({ success: true, id: result.insertedId }, { status: 201 });
   } catch {
     return NextResponse.json({ success: false, message: "Server error." }, { status: 500 });

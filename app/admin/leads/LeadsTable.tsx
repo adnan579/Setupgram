@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import LeadStatusSelect from "./LeadStatusSelect";
+import { formatDateShort as fmt } from "../../../lib/utils";
 
 type Lead = {
   _id: string;
@@ -31,10 +32,6 @@ const SERVICE_LABELS: Record<string, string> = {
   advertising: "Advertising",
   other: "Other",
 };
-
-function fmt(d: string) {
-  return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-}
 
 export default function LeadsTable({ leads: initial }: { leads: Lead[] }) {
   const [leads, setLeads] = useState(initial);

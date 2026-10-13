@@ -5,6 +5,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { formatDateShort as fmt } from "../../../../lib/utils";
 
 type Certificate = {
   _id: string;
@@ -79,14 +80,6 @@ export default function CertificatesTable({
     navigator.clipboard.writeText(url);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 1500);
-  }
-
-  function fmt(d: string) {
-    return new Date(d).toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
   }
 
   return (

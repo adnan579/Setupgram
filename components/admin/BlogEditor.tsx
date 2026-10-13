@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import MediaUploader, { UploadedMedia } from "./MediaUploader";
+import { slugify } from "../../lib/utils";
 
 type BlogPost = {
   _id?: string;
@@ -28,15 +29,6 @@ const CATEGORIES = [
   "Case Study",
   "General",
 ];
-
-function slugify(text: string) {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
-}
 
 export default function BlogEditor({ initial }: { initial?: BlogPost }) {
   const router = useRouter();

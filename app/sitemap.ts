@@ -2,6 +2,9 @@
 import { MetadataRoute } from "next";
 import { getDb } from "../lib/mongodb";
 
+// Without this the sitemap is generated once at build time and new posts/jobs never appear in it.
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = "https://setupgram.com";
 

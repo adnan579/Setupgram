@@ -1,8 +1,10 @@
 /** @format */
 
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 import { getDb } from "../../lib/mongodb";
+import { formatDateMedium as fmt } from "../../lib/utils";
 
 export const metadata: Metadata = {
   title: "About Us",
@@ -10,7 +12,8 @@ export const metadata: Metadata = {
     "Learn about SetupGram Infotech Solutions — our mission, our team, and how we help businesses thrive in the digital world.",
 };
 
-export const dynamic = "force-dynamic";
+// Cached and refreshed at most every 60s; admin saves refresh it instantly (lib/revalidate.ts)
+export const revalidate = 60;
 
 const stats = [
   { value: "100+", label: "Projects Delivered", color: "text-primary" },
@@ -64,14 +67,6 @@ const values = [
   },
 ];
 
-function fmt(d: Date | string) {
-  return new Date(d).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
 export default async function About() {
   // Fetch 3 most recent published posts from MongoDB
   let posts: Array<{
@@ -87,7 +82,7 @@ export default async function About() {
     const db = await getDb();
     const raw = await db
       .collection("blogs")
-      .find({ status: "PUBLISHED" })
+      .find({ status: "PUBLISHED" }, { projection: { content: 0 } })
       .sort({ createdAt: -1 })
       .limit(3)
       .toArray();
@@ -287,11 +282,12 @@ export default async function About() {
                     className={`h-48 relative ${i === 0 ? "bg-gradient-to-br from-primary/20 to-dark" : i === 1 ? "bg-gradient-to-br from-secondary/20 to-dark" : "bg-gradient-to-br from-primary/10 via-dark to-secondary/10"}`}
                   >
                     {post.coverImage ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <Image
                         src={post.coverImage}
                         alt={post.title}
-                        className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                        fill
+                        sizes="(min-width: 768px) 33vw, 100vw"
+                        className="object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                       />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center text-primary/30 group-hover:text-primary/60 transition-colors">

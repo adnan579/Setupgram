@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "../../../../../lib/mongodb";
+import { revalidateBlogs } from "../../../../../lib/revalidate";
 
 export async function PUT(
   request: Request,
@@ -49,6 +50,7 @@ export async function PUT(
       { _id: new ObjectId(params.id) },
       { $set: updateFields }
     );
+    revalidateBlogs();
 
     if (result.matchedCount === 0) {
       return NextResponse.json({ success: false, message: "Post not found." }, { status: 404 });
@@ -67,6 +69,7 @@ export async function DELETE(
   try {
     const db = await getDb();
     await db.collection("blogs").deleteOne({ _id: new ObjectId(params.id) });
+    revalidateBlogs();
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ success: false, message: "Server error." }, { status: 500 });

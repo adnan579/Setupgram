@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "../../../../../lib/mongodb";
+import { revalidateJobs } from "../../../../../lib/revalidate";
 
 export async function PUT(
   request: Request,
@@ -71,6 +72,7 @@ export async function PUT(
     const result = await db
       .collection("jobs")
       .updateOne({ _id: new ObjectId(params.id) }, { $set: updateFields });
+    revalidateJobs();
     if (result.matchedCount === 0) {
       return NextResponse.json(
         { success: false, message: "Job not found." },
@@ -93,6 +95,7 @@ export async function DELETE(
   try {
     const db = await getDb();
     await db.collection("jobs").deleteOne({ _id: new ObjectId(params.id) });
+    revalidateJobs();
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json(

@@ -9,7 +9,8 @@ export const metadata: Metadata = {
     "Join SetupGram Infotech Solutions. Explore open roles, our work culture, and why builders choose to grow their careers with us.",
 };
 
-export const dynamic = "force-dynamic";
+// Cached and refreshed at most every 60s; admin saves refresh it instantly (lib/revalidate.ts)
+export const revalidate = 60;
 
 const values = [
   {
