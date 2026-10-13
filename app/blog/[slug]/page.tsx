@@ -5,15 +5,28 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
+import { cache } from "react";
+import { optimizeCloudinaryHtml } from "../../../lib/cloudinary";
+import { formatDateLong as fmt } from "../../../lib/utils";
 
 interface Props {
   params: { slug: string };
 }
 
-async function getPost(slug: string) {
+// Cached and refreshed at most every 60s; admin saves refresh it instantly (lib/revalidate.ts)
+export const revalidate = 60;
+
+// Pages are generated on the first visit (none at build time) and then cached,
+// instead of hitting the database on every single request.
+export async function generateStaticParams() {
+  return [];
+}
+
+// cache(): generateMetadata() and the page both need the post - fetch it once per request.
+const getPost = cache(async (slug: string) => {
   const db = await getDb();
   return db.collection("blogs").findOne({ slug, status: "PUBLISHED" });
-}
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const post = await getPost(params.slug);
@@ -33,14 +46,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-function fmt(d: Date | string) {
-  return new Date(d).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
 function readTime(content: string) {
   const words = content
     .replace(/<[^>]+>/g, " ")
@@ -56,7 +61,10 @@ export default async function BlogPostPage({ params }: Props) {
   const db = await getDb();
   const related = await db
     .collection("blogs")
-    .find({ status: "PUBLISHED", slug: { $ne: params.slug } })
+    .find(
+      { status: "PUBLISHED", slug: { $ne: params.slug } },
+      { projection: { title: 1, slug: 1, category: 1, coverImage: 1, createdAt: 1 } },
+    )
     .sort({ createdAt: -1 })
     .limit(2)
     .toArray();
@@ -107,12 +115,15 @@ export default async function BlogPostPage({ params }: Props) {
       {post.coverImage && (
         <div className="px-6 mb-0">
           <div className="max-w-3xl mx-auto">
-            <div className="rounded-2xl overflow-hidden border border-white/10">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+            <div className="relative h-60 sm:h-80 md:h-[420px] rounded-2xl overflow-hidden border border-white/10">
+              {/* priority: this is the largest image above the fold (LCP) */}
+              <Image
                 src={post.coverImage}
                 alt={post.title}
-                className="w-full max-h-[480px] object-cover"
+                fill
+                priority
+                sizes="(min-width: 768px) 768px, 100vw"
+                className="object-cover"
               />
             </div>
           </div>
@@ -129,7 +140,7 @@ export default async function BlogPostPage({ params }: Props) {
         <div className="max-w-3xl mx-auto">
           <div
             className="prose-content"
-            dangerouslySetInnerHTML={{ __html: post.content }}
+            dangerouslySetInnerHTML={{ __html: optimizeCloudinaryHtml(post.content) }}
           />
         </div>
       </article>
@@ -187,12 +198,15 @@ export default async function BlogPostPage({ params }: Props) {
                   className="glass-panel rounded-xl overflow-hidden border border-white/5 hover:border-primary/20 transition-all group"
                 >
                   {r.coverImage && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={r.coverImage}
-                      alt={r.title}
-                      className="w-full h-32 object-cover"
-                    />
+                    <div className="relative h-32">
+                      <Image
+                        src={r.coverImage}
+                        alt={r.title}
+                        fill
+                        sizes="(min-width: 640px) 360px, 100vw"
+                        className="object-cover"
+                      />
+                    </div>
                   )}
                   <div className="p-4">
                     <span className="text-xs text-primary font-semibold uppercase tracking-wide">

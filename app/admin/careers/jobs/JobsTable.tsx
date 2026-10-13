@@ -5,6 +5,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { formatDateShort as fmt } from "../../../../lib/utils";
 
 type Job = {
   _id: string;
@@ -66,14 +67,6 @@ export default function JobsTable({ jobs: initial }: { jobs: Job[] }) {
     setJobs((prev) => prev.filter((j) => j._id !== id));
     setDeletingId(null);
     router.refresh();
-  }
-
-  function fmt(d: string) {
-    return new Date(d).toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
   }
 
   return (

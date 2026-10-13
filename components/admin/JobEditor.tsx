@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { slugify } from "../../lib/utils";
 
 type JobForm = {
   _id?: string;
@@ -39,14 +40,6 @@ const DEPARTMENTS = [
 ];
 const EMPLOYMENT_TYPES = ["Full-time", "Part-time", "Internship", "Contract"];
 
-function slugify(text: string) {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
-}
 function linesToArray(text: string) {
   return text
     .split("\n")

@@ -3,7 +3,10 @@ import { getDb } from "../../../../lib/mongodb";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cache } from "react";
+import { cloudinaryUrl } from "../../../../lib/cloudinary";
 import ShareButton from "./ShareButton";
+import { formatDateLong as fmt } from "../../../../lib/utils";
 
 interface Props {
   params: { slug: string };
@@ -17,10 +20,22 @@ const TYPE_LABELS: Record<string, string> = {
   "tech-camp": "Tech Camp",
 };
 
-async function getCertificate(slug: string) {
+// Cached and refreshed at most every 60s. Revoking/editing a certificate in the admin
+// panel refreshes this page instantly (lib/revalidate.ts), so a revoked certificate
+// is never shown as valid.
+export const revalidate = 60;
+
+// Pages are generated on the first visit (none at build time) and then cached,
+// instead of hitting the database on every single request.
+export async function generateStaticParams() {
+  return [];
+}
+
+// cache(): generateMetadata() and the page both need the certificate - fetch it once per request.
+const getCertificate = cache(async (slug: string) => {
   const db = await getDb();
   return db.collection("certificates").findOne({ slug });
-}
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const cert = await getCertificate(params.slug);
@@ -52,14 +67,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       canonical: `https://setupgram.com/career/verify/${cert.slug}`,
     },
   };
-}
-
-function fmt(d: Date | string) {
-  return new Date(d).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
 }
 
 export default async function VerifyCertificatePage({ params }: Props) {
@@ -122,8 +129,9 @@ export default async function VerifyCertificatePage({ params }: Props) {
           {cert.certificateImage && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={cert.certificateImage}
+              src={cloudinaryUrl(cert.certificateImage, 1600)}
               alt={`${cert.candidateName} certificate`}
+              decoding="async"
               className="w-full h-auto object-cover"
             />
           )}

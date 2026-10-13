@@ -1,12 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  experimental: {
-    // Allows multiple root layouts (admin has its own)
+  // Don't advertise the framework in the X-Powered-By header.
+  poweredByHeader: false,
+  images: {
+    // All content images live on Cloudinary, which resizes and converts them on its
+    // own CDN (see lib/cloudinaryLoader.ts). This avoids Vercel image-optimization limits.
+    loader: "custom",
+    loaderFile: "./lib/cloudinaryLoader.ts",
   },
-  // NOTE: api.bodyParser here is Pages Router config ONLY — ignored in App Router.
-  // File uploads now go directly from the browser to Cloudinary (signed upload).
-  // This means there is NO server-side body size limit to worry about.
+  // NOTE: File uploads go directly from the browser to Cloudinary (signed upload),
+  // so there is no server-side body size limit to worry about.
 };
 
 module.exports = nextConfig;

@@ -5,6 +5,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import MediaUploader, { UploadedMedia } from "./MediaUploader";
+import { slugify } from "../../lib/utils";
 
 type CertForm = {
   _id?: string;
@@ -30,15 +31,6 @@ const TYPES = [
   { value: "event", label: "Event" },
   { value: "tech-camp", label: "Tech Camp" },
 ];
-
-function slugify(text: string) {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
-}
 
 export default function CertificateEditor({ initial }: { initial?: CertForm }) {
   const router = useRouter();

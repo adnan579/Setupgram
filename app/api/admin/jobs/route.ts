@@ -1,15 +1,8 @@
 /** @format */
 import { NextResponse } from "next/server";
 import { getDb } from "../../../../lib/mongodb";
-
-function slugify(text: string) {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
-}
+import { revalidateJobs } from "../../../../lib/revalidate";
+import { slugify } from "../../../../lib/utils";
 
 export async function GET() {
   try {
@@ -97,6 +90,7 @@ export async function POST(request: Request) {
     };
 
     const result = await db.collection("jobs").insertOne(job);
+    revalidateJobs();
     return NextResponse.json(
       { success: true, id: result.insertedId },
       { status: 201 },

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { formatDateShort as fmt } from "../../../lib/utils";
 
 type Post = {
   _id: string;
@@ -55,10 +56,6 @@ export default function BlogsTable({ posts: initial }: { posts: Post[] }) {
     setPosts((prev) => prev.filter((p) => p._id !== id));
     setDeletingId(null);
     router.refresh();
-  }
-
-  function fmt(d: string) {
-    return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
   }
 
   return (

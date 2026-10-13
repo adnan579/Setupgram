@@ -3,6 +3,7 @@
 import { getDb } from "../../lib/mongodb";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { formatDateShort as fmt } from "../../lib/utils";
 
 export const metadata: Metadata = { title: "Dashboard" };
 export const dynamic = "force-dynamic";
@@ -10,30 +11,59 @@ export const dynamic = "force-dynamic";
 async function getStats() {
   const db = await getDb();
 
-  const [leads, posts] = await Promise.all([
-    db.collection("leads").find({}).toArray(),
-    db.collection("blogs").find({}).toArray(),
-  ]);
+  // Let MongoDB do the counting and only fetch the handful of rows we actually show.
+  // (Previously this loaded EVERY lead and EVERY blog post - including full HTML bodies -
+  // into memory on each dashboard visit.)
+  const [leadStatusRows, serviceRows, recentLeads, postStatusRows, recentPosts] =
+    await Promise.all([
+      db
+        .collection("leads")
+        .aggregate<{ _id: string | null; count: number }>([
+          { $group: { _id: "$status", count: { $sum: 1 } } },
+        ])
+        .toArray(),
+      db
+        .collection("leads")
+        .aggregate<{ _id: string; count: number }>([
+          { $match: { service: { $nin: [null, ""] } } },
+          { $group: { _id: "$service", count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+          { $limit: 1 },
+        ])
+        .toArray(),
+      db
+        .collection("leads")
+        .find({}, { projection: { name: 1, email: 1, status: 1, createdAt: 1 } })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .toArray(),
+      db
+        .collection("blogs")
+        .aggregate<{ _id: string | null; count: number }>([
+          { $group: { _id: "$status", count: { $sum: 1 } } },
+        ])
+        .toArray(),
+      db
+        .collection("blogs")
+        .find({}, { projection: { title: 1, category: 1, status: 1, createdAt: 1 } })
+        .sort({ createdAt: -1 })
+        .limit(3)
+        .toArray(),
+    ]);
 
-  const total = leads.length;
   const statusCount = { NEW: 0, CONTACTED: 0, CONVERTED: 0, LOST: 0 } as Record<string, number>;
-  leads.forEach((l) => { if (l.status) statusCount[l.status] = (statusCount[l.status] || 0) + 1; });
-
-  const serviceCount: Record<string, number> = {};
-  leads.forEach((l) => {
-    if (l.service) serviceCount[l.service] = (serviceCount[l.service] || 0) + 1;
+  let total = 0;
+  leadStatusRows.forEach((row) => {
+    total += row.count;
+    if (row._id) statusCount[row._id] = (statusCount[row._id] || 0) + row.count;
   });
-  const topService = Object.entries(serviceCount).sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
 
-  const recentLeads = leads
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 5);
+  const topService = serviceRows[0]?._id || "—";
 
-  const publishedPosts = posts.filter((p) => p.status === "PUBLISHED").length;
-  const draftPosts = posts.filter((p) => p.status === "DRAFT").length;
-  const recentPosts = posts
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 3);
+  const postCount = (status: string) =>
+    postStatusRows.find((row) => row._id === status)?.count ?? 0;
+  const publishedPosts = postCount("PUBLISHED");
+  const draftPosts = postCount("DRAFT");
 
   return { total, statusCount, topService, recentLeads, publishedPosts, draftPosts, recentPosts };
 }
@@ -44,10 +74,6 @@ const STATUS_COLORS: Record<string, string> = {
   CONVERTED: "text-green-400 bg-green-400/10 border-green-400/20",
   LOST: "text-red-400 bg-red-400/10 border-red-400/20",
 };
-
-function fmt(d: Date | string) {
-  return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-}
 
 export default async function AdminDashboard() {
   const { total, statusCount, topService, recentLeads, publishedPosts, draftPosts, recentPosts } = await getStats();

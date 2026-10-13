@@ -12,7 +12,8 @@ export default async function BlogsPage() {
   const db = await getDb();
   const posts = await db
     .collection("blogs")
-    .find({})
+    // The table never shows the post body - leaving it out keeps the page payload small
+    .find({}, { projection: { content: 0 } })
     .sort({ createdAt: -1 })
     .toArray();
 

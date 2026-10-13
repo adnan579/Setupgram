@@ -3,16 +3,28 @@ import { getDb } from "../../../../lib/mongodb";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cache } from "react";
 import JobApplyForm from "../../JobApplyForm";
+import { formatDateLong as fmt } from "../../../../lib/utils";
 
 interface Props {
   params: { slug: string };
 }
 
-async function getJob(slug: string) {
+// Cached and refreshed at most every 60s; admin saves refresh it instantly (lib/revalidate.ts)
+export const revalidate = 60;
+
+// Pages are generated on the first visit (none at build time) and then cached,
+// instead of hitting the database on every single request.
+export async function generateStaticParams() {
+  return [];
+}
+
+// cache(): generateMetadata() and the page both need the job - fetch it once per request.
+const getJob = cache(async (slug: string) => {
   const db = await getDb();
   return db.collection("jobs").findOne({ slug, status: "OPEN" });
-}
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const job = await getJob(params.slug);
@@ -29,14 +41,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     alternates: { canonical: `https://setupgram.com/career/jobs/${job.slug}` },
   };
-}
-
-function fmt(d: Date | string) {
-  return new Date(d).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
 }
 
 export default async function JobDetailPage({ params }: Props) {

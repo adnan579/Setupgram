@@ -1,15 +1,8 @@
 /** @format */
 import { NextResponse } from "next/server";
 import { getDb } from "../../../../lib/mongodb";
-
-function slugify(text: string) {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
-}
+import { revalidateCertificates } from "../../../../lib/revalidate";
+import { slugify } from "../../../../lib/utils";
 
 const TYPE_CODES: Record<string, string> = {
   internship: "INT",
@@ -111,6 +104,7 @@ export async function POST(request: Request) {
     };
 
     const result = await db.collection("certificates").insertOne(certificate);
+    revalidateCertificates();
     return NextResponse.json(
       { success: true, id: result.insertedId, slug, certificateId },
       { status: 201 },
