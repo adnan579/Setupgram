@@ -16,7 +16,7 @@ type Status = (typeof STATUSES)[number];
 const COLORS: Record<Status, string> = {
   NEW: "text-primary border-primary/40 bg-primary/10",
   REVIEWED: "text-yellow-400 border-yellow-400/40 bg-yellow-400/10",
-  SHORTLISTED: "text-secondary border-secondary/40 bg-secondary/10",
+  SHORTLISTED: "text-secondary-light border-secondary/40 bg-secondary/10",
   REJECTED: "text-red-400 border-red-400/40 bg-red-400/10",
   HIRED: "text-green-400 border-green-400/40 bg-green-400/10",
 };

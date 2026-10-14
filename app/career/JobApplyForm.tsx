@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 type FormState = "idle" | "loading" | "success" | "error";
 
@@ -105,8 +106,8 @@ export default function JobApplyForm({
 
   if (state === "success") {
     return (
-      <div className="glass-panel rounded-2xl p-8 text-center border border-primary/20">
-        <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center mb-4 mx-auto text-primary">
+      <div role="status" className="glass-panel rounded-2xl p-8 text-center border border-primary/20">
+        <div aria-hidden="true" className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center mb-4 mx-auto text-primary">
           <svg
             className="w-7 h-7"
             fill="none"
@@ -136,10 +137,11 @@ export default function JobApplyForm({
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1.5">
+          <label htmlFor="apply-name" className="block text-xs font-medium text-gray-400 mb-1.5">
             Full Name *
           </label>
           <input
+            id="apply-name"
             name="name"
             type="text"
             required
@@ -148,10 +150,11 @@ export default function JobApplyForm({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1.5">
+          <label htmlFor="apply-email" className="block text-xs font-medium text-gray-400 mb-1.5">
             Email *
           </label>
           <input
+            id="apply-email"
             name="email"
             type="email"
             required
@@ -160,10 +163,11 @@ export default function JobApplyForm({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1.5">
+          <label htmlFor="apply-phone" className="block text-xs font-medium text-gray-400 mb-1.5">
             Phone
           </label>
           <input
+            id="apply-phone"
             name="phone"
             type="tel"
             className="w-full px-3.5 py-2.5 rounded-lg text-sm"
@@ -171,10 +175,11 @@ export default function JobApplyForm({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1.5">
+          <label htmlFor="apply-linkedin" className="block text-xs font-medium text-gray-400 mb-1.5">
             LinkedIn Profile
           </label>
           <input
+            id="apply-linkedin"
             name="linkedin"
             type="url"
             className="w-full px-3.5 py-2.5 rounded-lg text-sm"
@@ -183,10 +188,11 @@ export default function JobApplyForm({
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1.5">
-            Resume (PDF)
+          <label htmlFor="apply-resume" className="block text-xs font-medium text-gray-400 mb-1.5">
+            Resume (PDF, DOC or DOCX)
           </label>
           <input
+            id="apply-resume"
             type="file"
             accept=".pdf,.doc,.docx"
             onChange={(e) =>
@@ -196,20 +202,21 @@ export default function JobApplyForm({
             className="w-full text-xs text-gray-400 file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/20 file:text-primary hover:file:bg-primary/30 file:cursor-pointer"
           />
           {resumeUploading && (
-            <p className="text-xs text-primary mt-1.5">Uploading…</p>
+            <p role="status" className="text-xs text-primary mt-1.5">Uploading…</p>
           )}
           {resumeName && !resumeUploading && (
-            <p className="text-xs text-green-400 mt-1.5">
+            <p role="status" className="text-xs text-green-400 mt-1.5">
               ✓ {resumeName} uploaded
             </p>
           )}
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1.5">
+          <label htmlFor="apply-cover" className="block text-xs font-medium text-gray-400 mb-1.5">
             Cover Message
           </label>
           <textarea
+            id="apply-cover"
             name="coverMessage"
             rows={3}
             className="w-full px-3.5 py-2.5 rounded-lg text-sm resize-none"
@@ -218,10 +225,19 @@ export default function JobApplyForm({
         </div>
 
         {state === "error" && (
-          <p className="text-red-400 text-xs bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2.5">
+          <p role="alert" className="text-red-300 text-xs bg-red-400/10 border border-red-400/30 rounded-lg px-3 py-2.5">
             {errorMsg}
           </p>
         )}
+
+        <p className="text-xs text-gray-400 leading-relaxed">
+          By submitting you agree that SetupGram may store your details and resume to assess your
+          application, as described in our{" "}
+          <Link href="/privacy" className="text-primary underline underline-offset-2 hover:text-white">
+            Privacy Policy
+          </Link>
+          .
+        </p>
 
         <button
           type="submit"

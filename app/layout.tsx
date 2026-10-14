@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Outfit } from "next/font/google";
 import "./globals.css";
 import SiteChrome from "../components/SiteChrome";
+import { siteConfig } from "../lib/siteConfig";
 
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
 const spaceGrotesk = Space_Grotesk({
@@ -12,6 +13,8 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
+  // Makes every relative URL in metadata (canonicals, Open Graph images) absolute
+  metadataBase: new URL(siteConfig.url),
   title: {
     default: "SetupGram Infotech Solutions | AI-Driven Business Solutions",
     template: "%s | SetupGram",
@@ -43,6 +46,14 @@ export const metadata: Metadata = {
     title: "SetupGram Infotech Solutions",
     description: "Perfect Place For Business Solutions.",
     type: "website",
+    siteName: "SetupGram",
+    locale: "en_IN",
+    // The default share image comes from app/opengraph-image.tsx
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SetupGram Infotech Solutions",
+    description: "AI chatbots, app development, CRM, advertising and consulting.",
   },
 };
 

@@ -6,13 +6,14 @@ export const metadata: Metadata = {
   title: "Verify a Certificate",
   description:
     "Verify the authenticity of any internship, training, hackathon, or event certificate issued by SetupGram Infotech Solutions.",
+  alternates: { canonical: "/career/verify" },
 };
 
 export default function VerifyPage() {
   return (
     <section className="pt-32 pb-24 px-6 min-h-screen">
       <div className="max-w-xl mx-auto text-center">
-        <p className="text-xs text-secondary font-semibold tracking-widest uppercase mb-4">
+        <p className="text-xs text-secondary-light font-semibold tracking-widest uppercase mb-4">
           Certificate Verification
         </p>
         <h1 className="font-display text-4xl md:text-5xl font-bold mb-6 text-white">

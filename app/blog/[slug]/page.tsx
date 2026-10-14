@@ -7,7 +7,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { cache } from "react";
 import { optimizeCloudinaryHtml } from "../../../lib/cloudinary";
-import { formatDateLong as fmt } from "../../../lib/utils";
+import { formatDateLong as fmt, slugify } from "../../../lib/utils";
+import { getRelatedPosts } from "../../../lib/blogQueries";
+import { absoluteUrl, breadcrumbJsonLd, DEFAULT_OG_IMAGE } from "../../../lib/seo";
+import { siteConfig } from "../../../lib/siteConfig";
+import JsonLd from "../../../components/JsonLd";
 
 interface Props {
   params: { slug: string };
@@ -39,12 +43,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: post.metaTitle || post.title,
       description: post.metaDescription || post.excerpt,
       type: "article",
-      url: `https://setupgram.com/blog/${post.slug}`,
-      ...(post.coverImage && { images: [{ url: post.coverImage }] }),
+      url: `/blog/${post.slug}`,
+      publishedTime: toIso(post.createdAt),
+      modifiedTime: toIso(post.updatedAt || post.createdAt),
+      images: post.coverImage ? [{ url: post.coverImage, alt: post.title }] : [DEFAULT_OG_IMAGE],
     },
-    alternates: { canonical: `https://setupgram.com/blog/${post.slug}` },
+    twitter: { card: "summary_large_image" },
+    alternates: { canonical: `/blog/${post.slug}` },
   };
 }
+
+const toIso = (d: unknown) => (d instanceof Date ? d.toISOString() : new Date(String(d)).toISOString());
 
 function readTime(content: string) {
   const words = content
@@ -58,43 +67,70 @@ export default async function BlogPostPage({ params }: Props) {
   const post = await getPost(params.slug);
   if (!post) notFound();
 
-  const db = await getDb();
-  const related = await db
-    .collection("blogs")
-    .find(
-      { status: "PUBLISHED", slug: { $ne: params.slug } },
-      { projection: { title: 1, slug: 1, category: 1, coverImage: 1, createdAt: 1 } },
-    )
-    .sort({ createdAt: -1 })
-    .limit(2)
-    .toArray();
+  // Same-category posts first, newest others only to fill the list
+  const related = await getRelatedPosts(params.slug, post.category, 2);
+  const categorySlug = slugify(post.category || "");
+
+  const articleJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    mainEntityOfPage: absoluteUrl(`/blog/${post.slug}`),
+    headline: post.title,
+    description: post.metaDescription || post.excerpt || undefined,
+    ...(post.coverImage && { image: [post.coverImage] }),
+    datePublished: toIso(post.createdAt),
+    dateModified: toIso(post.updatedAt || post.createdAt),
+    articleSection: post.category,
+    ...(post.metaKeywords && { keywords: post.metaKeywords }),
+    author: { "@type": "Organization", name: siteConfig.legalName, url: siteConfig.url },
+    publisher: {
+      "@type": "Organization",
+      name: siteConfig.legalName,
+      logo: { "@type": "ImageObject", url: absoluteUrl("/icon.png") },
+    },
+  };
 
   return (
     <>
+      <JsonLd
+        data={[
+          articleJsonLd,
+          breadcrumbJsonLd([
+            { name: "Home", path: "/" },
+            { name: "Blog", path: "/blog" },
+            ...(categorySlug ? [{ name: post.category, path: `/blog/category/${categorySlug}` }] : []),
+            { name: post.title, path: `/blog/${post.slug}` },
+          ]),
+        ]}
+      />
       {/* Hero */}
       <section className="pt-32 pb-0 px-6">
         <div className="max-w-3xl mx-auto">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-xs text-gray-600 mb-8">
-            <Link href="/" className="hover:text-primary transition-colors">
-              Home
-            </Link>
-            <span>/</span>
-            <Link
-              href="/about#blog"
-              className="hover:text-primary transition-colors"
-            >
-              Blog
-            </Link>
-            <span>/</span>
-            <span className="text-gray-500 truncate">{post.title}</span>
-          </div>
+          <nav aria-label="Breadcrumb" className="mb-8 text-xs text-gray-400">
+            <ol className="flex items-center gap-2 min-w-0">
+              <li>
+                <Link href="/" className="hover:text-primary transition-colors">Home</Link>
+              </li>
+              <li aria-hidden="true">/</li>
+              <li>
+                <Link href="/blog" className="hover:text-primary transition-colors">Blog</Link>
+              </li>
+              <li aria-hidden="true">/</li>
+              <li className="truncate" aria-current="page">{post.title}</li>
+            </ol>
+          </nav>
 
           <div className="flex items-center gap-3 mb-5">
-            <span className="text-xs font-bold tracking-widest uppercase text-primary bg-primary/10 border border-primary/20 px-3 py-1 rounded-full">
-              {post.category}
-            </span>
-            <span className="text-xs text-gray-600">
+            {categorySlug ? (
+              <Link
+                href={`/blog/category/${categorySlug}`}
+                className="text-xs font-bold tracking-widest uppercase text-primary bg-primary/10 border border-primary/20 px-3 py-1 rounded-full hover:bg-primary/20"
+              >
+                {post.category}
+              </Link>
+            ) : null}
+            <span className="text-xs text-gray-500">
               {fmt(post.createdAt)} · {readTime(post.content)} min read
             </span>
           </div>
@@ -215,7 +251,7 @@ export default async function BlogPostPage({ params }: Props) {
                     <p className="text-white font-medium mt-1 group-hover:text-primary transition-colors line-clamp-2 text-sm">
                       {r.title}
                     </p>
-                    <p className="text-xs text-gray-600 mt-2">
+                    <p className="text-xs text-gray-500 mt-2">
                       {fmt(r.createdAt)}
                     </p>
                   </div>

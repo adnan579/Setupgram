@@ -1,12 +1,14 @@
 /** @format */
 
 import Link from "next/link";
+import { siteConfig, whatsappHref } from "../lib/siteConfig";
+import CookieSettingsButton from "./CookieSettingsButton";
 
 const footerLinks = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About" },
-  { href: "/#services", label: "Services" },
-  { href: "/#consulting", label: "Consulting" },
+  { href: "/services", label: "Services" },
+  { href: "/blog", label: "Blog" },
   { href: "/career", label: "Careers" },
   { href: "/contact", label: "Contact" },
 ];
@@ -60,29 +62,77 @@ export default function Footer() {
               className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-primary text-primary hover:bg-primary hover:text-dark transition-all font-bold text-sm"
             >
               Get in Touch
-              <span aria-hidden>→</span>
+              <span aria-hidden="true">→</span>
             </Link>
 
-            <p className="text-xs text-gray-600 mt-6">
-              <a
-                href="mailto:info@setupgram.com"
-                className="hover:text-primary transition-colors"
-              >
-                info@setupgram.com
-              </a>
-            </p>
+            <ul className="mt-6 space-y-1.5 text-sm text-gray-400">
+              <li>
+                <a href={`mailto:${siteConfig.email}`} className="hover:text-primary transition-colors">
+                  {siteConfig.email}
+                </a>
+              </li>
+              {siteConfig.phone && (
+                <li>
+                  <a href={siteConfig.phoneHref} className="hover:text-primary transition-colors">
+                    {siteConfig.phone}
+                  </a>
+                </li>
+              )}
+              {whatsappHref() && (
+                <li>
+                  <a
+                    href={whatsappHref()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-primary transition-colors"
+                  >
+                    WhatsApp us
+                  </a>
+                </li>
+              )}
+            </ul>
+
+            {siteConfig.social.length > 0 && (
+              <ul aria-label="Social media" className="mt-4 flex flex-wrap gap-x-4 gap-y-1 md:justify-end text-sm text-gray-400">
+                {siteConfig.social.map(({ label, href }) => (
+                  <li key={label}>
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-primary transition-colors"
+                    >
+                      {label}
+                      <span className="sr-only"> (opens in a new tab)</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 
         {/* Bottom Row */}
-        <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row justify-between items-center gap-2 text-sm text-gray-600">
+        <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row justify-between items-center gap-2 text-sm text-gray-500">
           <span>
             &copy; {new Date().getFullYear()} SetupGram Infotech Solutions. All
             rights reserved.
           </span>
-          <span className="text-xs text-gray-700">
-            Built with Passion For Innovation & Growth{" "}
-          </span>
+          <ul className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs">
+            <li>
+              <Link href="/privacy" className="hover:text-primary transition-colors">
+                Privacy Policy
+              </Link>
+            </li>
+            <li>
+              <Link href="/terms" className="hover:text-primary transition-colors">
+                Terms of Service
+              </Link>
+            </li>
+            <li>
+              <CookieSettingsButton className="hover:text-primary transition-colors" />
+            </li>
+          </ul>
         </div>
       </div>
     </footer>

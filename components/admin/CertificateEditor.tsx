@@ -292,7 +292,7 @@ export default function CertificateEditor({ initial }: { initial?: CertForm }) {
             Verification Slug *
           </label>
           <div className="flex">
-            <span className="px-3 py-3 text-xs text-gray-600 bg-white/[0.02] border border-r-0 border-white/10 rounded-l-lg">
+            <span className="px-3 py-3 text-xs text-gray-500 bg-white/[0.02] border border-r-0 border-white/10 rounded-l-lg">
               /career/verify/
             </span>
             <input
@@ -424,7 +424,7 @@ export default function CertificateEditor({ initial }: { initial?: CertForm }) {
               alt="Certificate"
               className="w-full h-auto object-cover"
             />
-            <button
+            <button type="button" aria-label="Remove certificate image"
               onClick={() => set("certificateImage", "")}
               className="absolute top-2 right-2 w-7 h-7 bg-red-500/80 hover:bg-red-500 rounded-full flex items-center justify-center text-white transition-colors"
             >

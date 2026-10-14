@@ -10,11 +10,18 @@ body {
   overflow-x: hidden;
 }
 
+/* Cards sit on a near-black page, so a blur behind them adds nothing visible but costs a lot
+   of GPU time (it was on 50+ elements). A slightly stronger tint + border gives the same look. */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* The fixed top bar is the only element that scrolls OVER other content, so it keeps the blur. */
+.glass-nav {
+  background: rgba(5, 5, 5, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .gradient-text {
@@ -38,14 +45,20 @@ textarea {
 
 input:focus,
 textarea:focus {
-  outline: none;
   border-color: #00f0ff;
   background: rgba(0, 240, 255, 0.05);
 }
 
+/* Placeholder text: 25% white was ~2.2:1 (unreadable); 55% white is ~6:1. */
 input::placeholder,
 textarea::placeholder {
-  color: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* Visible keyboard focus for everything interactive (WCAG 2.4.7). */
+:focus-visible {
+  outline: 2px solid #00f0ff;
+  outline-offset: 2px;
 }
 
 /* Scrollbar */
@@ -106,7 +119,7 @@ textarea::placeholder {
   border-left: 3px solid #00f0ff;
   padding-left: 1.25rem;
   margin: 1.5rem 0;
-  color: #64748b;
+  color: #94a3b8;
   font-style: italic;
 }
 .prose-content code {

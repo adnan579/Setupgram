@@ -5,45 +5,25 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import { getDb } from "../../lib/mongodb";
 import { formatDateMedium as fmt } from "../../lib/utils";
+import { team } from "../../lib/team";
 
 export const metadata: Metadata = {
   title: "About Us",
   description:
     "Learn about SetupGram Infotech Solutions — our mission, our team, and how we help businesses thrive in the digital world.",
+  alternates: { canonical: "/about" },
 };
 
 // Cached and refreshed at most every 60s; admin saves refresh it instantly (lib/revalidate.ts)
 export const revalidate = 60;
 
+// Only facts the site already states elsewhere. Add "projects delivered" or similar figures
+// once you can document them.
 const stats = [
-  { value: "100+", label: "Projects Delivered", color: "text-primary" },
-  { value: "AI", label: "Driven Solutions", color: "text-secondary" },
-  { value: "24/7", label: "Support Availability", color: "text-white" },
-  { value: "ROI", label: "Focused Growth", color: "text-primary" },
-];
-
-const team = [
-  {
-    name: "Adnan",
-    role: "Founder & CTO",
-    bio: "Full-stack engineer with 3+ years building scalable SaaS products across fintech and e-commerce.",
-    accent: "primary",
-    initial: "A",
-  },
-  {
-    name: "Maqsood Ali",
-    role: "Co-Founder & Strategy Lead",
-    bio: "Former McKinsey consultant turned tech entrepreneur, specializing in digital transformation roadmaps.",
-    accent: "secondary",
-    initial: "M",
-  },
-  {
-    name: "Dev Nair",
-    role: "Head of AI & Integrations",
-    bio: "AI/ML specialist with a focus on deploying practical, revenue-generating automation for SMEs.",
-    accent: "primary",
-    initial: "D",
-  },
+  { value: "6", label: "Core Services", color: "text-primary" },
+  { value: "AI", label: "Driven Solutions", color: "text-secondary-light" },
+  { value: "24h", label: "Enquiry Response Time", color: "text-white" },
+  { value: "3", label: "Platforms: Web, Android, iOS", color: "text-primary" },
 ];
 
 const values = [
@@ -157,11 +137,11 @@ export default async function About() {
       {/* Values */}
       <section className="py-16 px-6 border-t border-white/5">
         <div className="max-w-7xl mx-auto">
-          <p className="text-center text-xs text-secondary font-semibold tracking-widest uppercase mb-3">
+          <p className="text-center text-xs text-secondary-light font-semibold tracking-widest uppercase mb-3">
             How We Work
           </p>
           <h2 className="font-display text-4xl font-bold text-white text-center mb-12">
-            Our Core <span className="text-secondary">Values</span>
+            Our Core <span className="text-secondary-light">Values</span>
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {values.map(({ icon, title, description }) => (
@@ -169,7 +149,7 @@ export default async function About() {
                 key={title}
                 className="glass-panel p-8 rounded-2xl hover:-translate-y-1 transition-transform duration-300"
               >
-                <span className="text-4xl mb-5 block">{icon}</span>
+                <span aria-hidden="true" className="text-4xl mb-5 block">{icon}</span>
                 <h3 className="text-xl font-bold text-white mb-3">{title}</h3>
                 <p className="text-gray-400 text-sm leading-relaxed">
                   {description}
@@ -204,7 +184,7 @@ export default async function About() {
               <div className="flex-shrink-0">
                 <a
                   href="/contact"
-                  className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 text-dark font-bold hover:shadow-[0_0_25px_rgba(249,115,22,0.4)] transition-all whitespace-nowrap"
+                  className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 text-dark font-bold hover:brightness-110 transition-all whitespace-nowrap"
                 >
                   Launch a Campaign →
                 </a>
@@ -228,19 +208,30 @@ export default async function About() {
             about your results.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {team.map(({ name, role, bio, accent, initial }) => (
+            {team.map(({ name, role, bio, accent, photo }) => (
               <div
                 key={name}
                 className="glass-panel rounded-2xl p-8 flex flex-col items-center text-center hover:-translate-y-1 transition-transform duration-300"
               >
-                <div
-                  className={`w-20 h-20 rounded-full flex items-center justify-center font-display font-bold text-3xl text-dark mb-5 ${accent === "primary" ? "bg-gradient-to-br from-primary to-primary/60" : "bg-gradient-to-br from-secondary to-secondary/60"}`}
-                >
-                  {initial}
-                </div>
+                {photo ? (
+                  <Image
+                    src={photo}
+                    alt={`${name}, ${role}`}
+                    width={96}
+                    height={96}
+                    className="w-24 h-24 rounded-full object-cover mb-5"
+                  />
+                ) : (
+                  <div
+                    aria-hidden="true"
+                    className={`w-20 h-20 rounded-full flex items-center justify-center font-display font-bold text-3xl text-dark mb-5 ${accent === "primary" ? "bg-gradient-to-br from-primary to-primary/60" : "bg-gradient-to-br from-secondary to-secondary/60"}`}
+                  >
+                    {name[0]}
+                  </div>
+                )}
                 <h3 className="text-xl font-bold text-white mb-1">{name}</h3>
                 <p
-                  className={`text-xs font-semibold tracking-wide uppercase mb-4 ${accent === "primary" ? "text-primary" : "text-secondary"}`}
+                  className={`text-xs font-semibold tracking-wide uppercase mb-4 ${accent === "primary" ? "text-primary" : "text-secondary-light"}`}
                 >
                   {role}
                 </p>
@@ -255,11 +246,11 @@ export default async function About() {
       <section id="blog" className="py-24 px-6 border-t border-white/5">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <p className="text-xs text-secondary font-semibold tracking-widest uppercase mb-3">
+            <p className="text-xs text-secondary-light font-semibold tracking-widest uppercase mb-3">
               From the Blog
             </p>
             <h2 className="font-display text-4xl font-bold text-white mb-4">
-              Latest <span className="text-secondary">Insights</span>
+              Latest <span className="text-secondary-light">Insights</span>
             </h2>
             <p className="text-gray-400 max-w-2xl mx-auto">
               Stay up-to-date with our latest thoughts on AI, web development,
@@ -268,7 +259,7 @@ export default async function About() {
           </div>
 
           {posts.length === 0 ? (
-            <p className="text-center text-gray-600 py-12">
+            <p className="text-center text-gray-500 py-12">
               No posts published yet. Check back soon.
             </p>
           ) : (

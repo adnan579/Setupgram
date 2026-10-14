@@ -6,6 +6,7 @@ import Link from "next/link";
 import { cache } from "react";
 import JobApplyForm from "../../JobApplyForm";
 import { formatDateLong as fmt } from "../../../../lib/utils";
+import { DEFAULT_OG_IMAGE } from "../../../../lib/seo";
 
 interface Props {
   params: { slug: string };
@@ -38,6 +39,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: job.metaDescription || job.excerpt,
       type: "website",
       url: `https://setupgram.com/career/jobs/${job.slug}`,
+      images: [DEFAULT_OG_IMAGE],
     },
     alternates: { canonical: `https://setupgram.com/career/jobs/${job.slug}` },
   };
@@ -95,7 +97,7 @@ export default async function JobDetailPage({ params }: Props) {
 
       <section className="pt-32 pb-0 px-6">
         <div className="max-w-3xl mx-auto">
-          <div className="flex items-center gap-2 text-xs text-gray-600 mb-8">
+          <div className="flex items-center gap-2 text-xs text-gray-500 mb-8">
             <Link
               href="/career"
               className="hover:text-primary transition-colors"
@@ -110,7 +112,7 @@ export default async function JobDetailPage({ params }: Props) {
             <span className="text-xs font-bold tracking-widest uppercase text-primary bg-primary/10 border border-primary/20 px-3 py-1 rounded-full">
               {job.department}
             </span>
-            <span className="text-xs text-gray-600">
+            <span className="text-xs text-gray-500">
               {job.employmentType} · {job.location} · {job.experience}
             </span>
           </div>
@@ -124,7 +126,7 @@ export default async function JobDetailPage({ params }: Props) {
             </p>
           )}
 
-          <div className="flex items-center gap-4 text-xs text-gray-600 mb-8">
+          <div className="flex items-center gap-4 text-xs text-gray-500 mb-8">
             <span>Posted {fmt(job.createdAt)}</span>
             {job.salaryRange && <span>· {job.salaryRange}</span>}
             {job.closingDate && <span>· Apply by {fmt(job.closingDate)}</span>}
@@ -173,7 +175,7 @@ export default async function JobDetailPage({ params }: Props) {
                       key={i}
                       className="flex items-start gap-2 text-gray-400 text-sm"
                     >
-                      <span className="text-secondary mt-1">→</span> {r}
+                      <span className="text-secondary-light mt-1">→</span> {r}
                     </li>
                   ))}
                 </ul>

@@ -233,7 +233,7 @@ export default function JobEditor({ initial }: { initial?: JobForm }) {
                 Slug *
               </label>
               <div className="flex">
-                <span className="px-3 py-3 text-xs text-gray-600 bg-white/[0.02] border border-r-0 border-white/10 rounded-l-lg">
+                <span className="px-3 py-3 text-xs text-gray-500 bg-white/[0.02] border border-r-0 border-white/10 rounded-l-lg">
                   /career/jobs/
                 </span>
                 <input
@@ -363,7 +363,7 @@ export default function JobEditor({ initial }: { initial?: JobForm }) {
             <div>
               <label className="block text-xs text-gray-500 uppercase tracking-wide font-semibold mb-2">
                 Responsibilities{" "}
-                <span className="text-gray-600 font-normal normal-case">
+                <span className="text-gray-500 font-normal normal-case">
                   (one per line)
                 </span>
               </label>
@@ -380,7 +380,7 @@ export default function JobEditor({ initial }: { initial?: JobForm }) {
             <div>
               <label className="block text-xs text-gray-500 uppercase tracking-wide font-semibold mb-2">
                 Requirements{" "}
-                <span className="text-gray-600 font-normal normal-case">
+                <span className="text-gray-500 font-normal normal-case">
                   (one per line)
                 </span>
               </label>
@@ -395,7 +395,7 @@ export default function JobEditor({ initial }: { initial?: JobForm }) {
             <div>
               <label className="block text-xs text-gray-500 uppercase tracking-wide font-semibold mb-2">
                 Benefits{" "}
-                <span className="text-gray-600 font-normal normal-case">
+                <span className="text-gray-500 font-normal normal-case">
                   (one per line)
                 </span>
               </label>
@@ -431,7 +431,7 @@ export default function JobEditor({ initial }: { initial?: JobForm }) {
               <div>
                 <label className="block text-xs text-gray-500 uppercase tracking-wide font-semibold mb-2">
                   Closing Date{" "}
-                  <span className="text-gray-600 font-normal normal-case">
+                  <span className="text-gray-500 font-normal normal-case">
                     (optional)
                   </span>
                 </label>

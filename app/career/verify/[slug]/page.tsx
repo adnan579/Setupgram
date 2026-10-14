@@ -144,7 +144,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
               {cert.candidateName}
             </h1>
             <p className="text-gray-400 mb-6">has successfully completed</p>
-            <p className="text-xl text-secondary font-semibold mb-6">
+            <p className="text-xl text-secondary-light font-semibold mb-6">
               {cert.program}
             </p>
 
@@ -227,7 +227,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
           </div>
         </div>
 
-        <p className="text-center text-xs text-gray-600 mt-6">
+        <p className="text-center text-xs text-gray-500 mt-6">
           This page independently confirms the authenticity of this certificate.{" "}
           <Link href="/career/verify" className="text-primary hover:underline">
             Verify another certificate →

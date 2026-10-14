@@ -104,7 +104,7 @@ export default function JobsTable({ jobs: initial }: { jobs: Job[] }) {
         </select>
       </div>
 
-      <p className="text-xs text-gray-600">
+      <p className="text-xs text-gray-500">
         Showing {filtered.length} of {jobs.length} jobs
       </p>
 
@@ -129,6 +129,7 @@ export default function JobsTable({ jobs: initial }: { jobs: Job[] }) {
                 onClick={() => cycleStatus(job._id, job.status)}
                 disabled={togglingId === job._id}
                 title="Click to cycle status"
+                aria-label="Click to cycle status"
                 className={`text-xs px-2.5 py-1 rounded-full border font-medium flex-shrink-0 disabled:opacity-40 ${STATUS_COLORS[job.status]}`}
               >
                 {job.status}
@@ -142,14 +143,14 @@ export default function JobsTable({ jobs: initial }: { jobs: Job[] }) {
                   <span className="text-xs text-gray-500">
                     {job.department}
                   </span>
-                  <span className="text-gray-700">·</span>
+                  <span className="text-gray-500">·</span>
                   <span className="text-xs text-gray-500">{job.location}</span>
-                  <span className="text-gray-700">·</span>
-                  <span className="text-xs text-gray-600">
+                  <span className="text-gray-500">·</span>
+                  <span className="text-xs text-gray-500">
                     {job.employmentType}
                   </span>
-                  <span className="text-gray-700 hidden sm:block">·</span>
-                  <span className="text-xs text-gray-600 hidden sm:block">
+                  <span className="text-gray-500 hidden sm:block">·</span>
+                  <span className="text-xs text-gray-500 hidden sm:block">
                     {fmt(job.createdAt)}
                   </span>
                 </div>
@@ -160,6 +161,7 @@ export default function JobsTable({ jobs: initial }: { jobs: Job[] }) {
                   href={`/admin/careers/jobs/${job._id}`}
                   className="p-2 text-gray-500 hover:text-primary transition-colors rounded-lg hover:bg-primary/10"
                   title="Edit"
+                  aria-label="Edit"
                 >
                   <svg
                     className="w-4 h-4"
@@ -181,6 +183,7 @@ export default function JobsTable({ jobs: initial }: { jobs: Job[] }) {
                     target="_blank"
                     className="p-2 text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-white/5"
                     title="View live"
+                    aria-label="View live"
                   >
                     <svg
                       className="w-4 h-4"
@@ -197,10 +200,10 @@ export default function JobsTable({ jobs: initial }: { jobs: Job[] }) {
                     </svg>
                   </Link>
                 )}
-                <button
+                <button type="button" aria-label="Delete"
                   onClick={() => handleDelete(job._id, job.title)}
                   disabled={deletingId === job._id}
-                  className="p-2 text-gray-600 hover:text-red-400 transition-colors rounded-lg hover:bg-red-400/10 disabled:opacity-40"
+                  className="p-2 text-gray-500 hover:text-red-400 transition-colors rounded-lg hover:bg-red-400/10 disabled:opacity-40"
                   title="Delete"
                 >
                   <svg

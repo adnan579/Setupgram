@@ -89,6 +89,11 @@ export default function BlogEditor({ initial }: { initial?: BlogPost }) {
     }, 0);
   }, [form.content]);
 
+  // Makes alt text safe inside a double-quoted HTML attribute
+  function escapeAttr(value: string) {
+    return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
   // Called when admin picks media from the uploader panel
   const handleMediaInsert = useCallback((media: UploadedMedia) => {
     if (mediaInsertTarget === "cover") {
@@ -103,7 +108,7 @@ export default function BlogEditor({ initial }: { initial?: BlogPost }) {
       );
     } else {
       insertAtCursor(
-        `<img src="${media.url}" alt="" style="width:100%;max-width:800px;border-radius:8px;margin:1rem 0" loading="lazy" />`
+        `<img src="${media.url}" alt="${escapeAttr(media.alt || "")}" style="width:100%;max-width:800px;border-radius:8px;margin:1rem 0" loading="lazy" />`
       );
     }
     setShowMediaPanel(false);
@@ -185,7 +190,7 @@ export default function BlogEditor({ initial }: { initial?: BlogPost }) {
           Back
         </button>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-gray-600 hidden sm:block">{wordCount} words · ~{readTime} min read</span>
+          <span className="text-xs text-gray-500 hidden sm:block">{wordCount} words · ~{readTime} min read</span>
           <button
             onClick={() => handleSave("DRAFT")}
             disabled={saving}
@@ -256,7 +261,7 @@ export default function BlogEditor({ initial }: { initial?: BlogPost }) {
               <div>
                 <label className="block text-xs text-gray-500 uppercase tracking-wide font-semibold mb-2">Slug *</label>
                 <div className="flex">
-                  <span className="px-3 py-3 text-xs text-gray-600 bg-white/[0.02] border border-r-0 border-white/10 rounded-l-lg">/blog/</span>
+                  <span className="px-3 py-3 text-xs text-gray-500 bg-white/[0.02] border border-r-0 border-white/10 rounded-l-lg">/blog/</span>
                   <input
                     type="text"
                     value={form.slug}
@@ -337,7 +342,7 @@ export default function BlogEditor({ initial }: { initial?: BlogPost }) {
           <div className="glass-panel rounded-2xl border border-white/5 overflow-hidden">
             {/* Format Toolbar */}
             <div className="flex items-center gap-1 px-4 py-2.5 border-b border-white/5 bg-white/[0.01] flex-wrap">
-              <span className="text-xs text-gray-600 mr-1 hidden sm:block">Format:</span>
+              <span className="text-xs text-gray-500 mr-1 hidden sm:block">Format:</span>
 
               {[
                 { label: "H2", title: "Heading 2", action: () => insertBlock("<h2></h2>") },
@@ -359,7 +364,7 @@ export default function BlogEditor({ initial }: { initial?: BlogPost }) {
                 className="px-2.5 py-1 text-xs italic text-gray-400 hover:text-white hover:bg-white/10 rounded transition-all">
                 I
               </button>
-              <button onClick={() => insertTag("a", ' href=""')} title="Link"
+              <button type="button" aria-label="Link" onClick={() => insertTag("a", ' href=""')} title="Link"
                 className="px-2.5 py-1 text-xs text-gray-400 hover:text-primary hover:bg-primary/10 rounded transition-all">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -372,13 +377,13 @@ export default function BlogEditor({ initial }: { initial?: BlogPost }) {
 
               <div className="w-px h-4 bg-white/10 mx-1" />
 
-              <button onClick={() => insertBlock("<ul>\n  <li></li>\n  <li></li>\n</ul>")} title="Bullet list"
+              <button type="button" aria-label="Bullet list" onClick={() => insertBlock("<ul>\n  <li></li>\n  <li></li>\n</ul>")} title="Bullet list"
                 className="px-2.5 py-1 text-xs text-gray-400 hover:text-white hover:bg-white/10 rounded transition-all">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
                 </svg>
               </button>
-              <button onClick={() => insertBlock("<ol>\n  <li></li>\n  <li></li>\n</ol>")} title="Numbered list"
+              <button type="button" aria-label="Numbered list" onClick={() => insertBlock("<ol>\n  <li></li>\n  <li></li>\n</ol>")} title="Numbered list"
                 className="px-2.5 py-1 text-xs text-gray-400 hover:text-white hover:bg-white/10 rounded transition-all">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
@@ -409,7 +414,7 @@ export default function BlogEditor({ initial }: { initial?: BlogPost }) {
               <button
                 onClick={() => { setMediaInsertTarget("content"); setActiveTab("media"); setShowMediaPanel(true); }}
                 title="Insert video"
-                className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-secondary hover:bg-secondary/10 rounded transition-all font-medium"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-secondary-light hover:bg-secondary/10 rounded transition-all font-medium"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -429,8 +434,8 @@ export default function BlogEditor({ initial }: { initial?: BlogPost }) {
                 placeholder={`<h2>Introduction</h2>\n<p>Your post content here…</p>\n\n<h2>Section Two</h2>\n<p>More content…</p>\n\n<!-- Images and videos inserted from the toolbar above -->`}
               />
               <div className="flex justify-between items-center mt-2">
-                <p className="text-xs text-gray-600">HTML supported · Use toolbar or Media tab to insert images/videos</p>
-                <span className="text-xs text-gray-600">{wordCount} words · ~{readTime} min read</span>
+                <p className="text-xs text-gray-500">HTML supported · Use toolbar or Media tab to insert images/videos</p>
+                <span className="text-xs text-gray-500">{wordCount} words · ~{readTime} min read</span>
               </div>
             </div>
           </div>
@@ -469,7 +474,7 @@ export default function BlogEditor({ initial }: { initial?: BlogPost }) {
                 onClick={() => setMediaInsertTarget("cover")}
                 className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
                   mediaInsertTarget === "cover"
-                    ? "bg-secondary/20 text-secondary border-secondary/30"
+                    ? "bg-secondary/20 text-secondary-light border-secondary/30"
                     : "border-white/10 text-gray-400 hover:text-white"
                 }`}
               >
@@ -486,7 +491,7 @@ export default function BlogEditor({ initial }: { initial?: BlogPost }) {
                 <div className="relative rounded-xl overflow-hidden border border-white/10 group w-full max-w-sm">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={form.coverImage} alt="Cover" className="w-full h-32 object-cover" />
-                  <button
+                  <button type="button" aria-label="Remove cover image"
                     onClick={() => set("coverImage", "")}
                     className="absolute top-2 right-2 w-7 h-7 bg-red-500/80 hover:bg-red-500 rounded-full flex items-center justify-center text-white transition-colors"
                     title="Remove cover image"
@@ -508,7 +513,7 @@ export default function BlogEditor({ initial }: { initial?: BlogPost }) {
               <li className="flex items-start gap-2"><span className="text-primary mt-0.5">→</span> Images are resized to max 1600px wide. Videos are capped at 1280px.</li>
               <li className="flex items-start gap-2"><span className="text-primary mt-0.5">→</span> After uploading, click <strong className="text-gray-300">Insert into Content</strong> — the HTML tag is placed at your cursor position in the editor.</li>
               <li className="flex items-start gap-2"><span className="text-primary mt-0.5">→</span> Use <strong className="text-gray-300">From URL</strong> to embed YouTube, Vimeo, or any external media directly.</li>
-              <li className="flex items-start gap-2"><span className="text-secondary mt-0.5">→</span> Max file size: <strong className="text-gray-300">Images 10MB · Videos 50MB</strong></li>
+              <li className="flex items-start gap-2"><span className="text-secondary-light mt-0.5">→</span> Max file size: <strong className="text-gray-300">Images 10MB · Videos 50MB</strong></li>
             </ul>
           </div>
         </div>
@@ -526,7 +531,7 @@ export default function BlogEditor({ initial }: { initial?: BlogPost }) {
 
           <div>
             <label className="block text-xs text-gray-500 uppercase tracking-wide font-semibold mb-2">
-              Meta Title <span className="text-gray-600 font-normal normal-case">(recommended: 50–60 chars)</span>
+              Meta Title <span className="text-gray-500 font-normal normal-case">(recommended: 50–60 chars)</span>
             </label>
             <input
               type="text"
@@ -535,14 +540,14 @@ export default function BlogEditor({ initial }: { initial?: BlogPost }) {
               className="w-full px-4 py-3 rounded-lg text-sm"
               placeholder={form.title || "Post Title | SetupGram"}
             />
-            <p className={`text-xs mt-1 ${(form.metaTitle || "").length > 60 ? "text-red-400" : "text-gray-600"}`}>
+            <p className={`text-xs mt-1 ${(form.metaTitle || "").length > 60 ? "text-red-400" : "text-gray-500"}`}>
               {(form.metaTitle || "").length}/60 characters
             </p>
           </div>
 
           <div>
             <label className="block text-xs text-gray-500 uppercase tracking-wide font-semibold mb-2">
-              Meta Description <span className="text-gray-600 font-normal normal-case">(recommended: 140–160 chars)</span>
+              Meta Description <span className="text-gray-500 font-normal normal-case">(recommended: 140–160 chars)</span>
             </label>
             <textarea
               value={form.metaDescription || ""}
@@ -551,14 +556,14 @@ export default function BlogEditor({ initial }: { initial?: BlogPost }) {
               className="w-full px-4 py-3 rounded-lg text-sm resize-none"
               placeholder={form.excerpt || "A concise summary for Google search results…"}
             />
-            <p className={`text-xs mt-1 ${(form.metaDescription || "").length > 160 ? "text-red-400" : "text-gray-600"}`}>
+            <p className={`text-xs mt-1 ${(form.metaDescription || "").length > 160 ? "text-red-400" : "text-gray-500"}`}>
               {(form.metaDescription || "").length}/160 characters
             </p>
           </div>
 
           <div>
             <label className="block text-xs text-gray-500 uppercase tracking-wide font-semibold mb-2">
-              Meta Keywords <span className="text-gray-600 font-normal normal-case">(comma-separated)</span>
+              Meta Keywords <span className="text-gray-500 font-normal normal-case">(comma-separated)</span>
             </label>
             <input
               type="text"
@@ -572,7 +577,7 @@ export default function BlogEditor({ initial }: { initial?: BlogPost }) {
           {/* Google SERP Preview */}
           {(form.metaTitle || form.title) && (
             <div className="rounded-xl bg-white/[0.02] border border-white/5 p-5">
-              <p className="text-xs text-gray-600 uppercase tracking-wide mb-3 font-semibold">Google SERP Preview</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-3 font-semibold">Google SERP Preview</p>
               <div className="space-y-0.5">
                 <p className="text-lg leading-tight font-medium hover:underline cursor-default" style={{ color: "#8ab4f8" }}>
                   {form.metaTitle || form.title}

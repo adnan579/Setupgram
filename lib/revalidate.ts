@@ -17,6 +17,10 @@ function safely(fn: () => void) {
 export function revalidateBlogs() {
   safely(() => {
     revalidatePath("/about");
+    revalidatePath("/blog");
+    revalidatePath("/blog/page/[page]", "page");
+    revalidatePath("/blog/category/[category]", "page");
+    revalidatePath("/blog/category/[category]/page/[page]", "page");
     revalidatePath("/blog/[slug]", "page");
     revalidatePath("/sitemap.xml");
   });

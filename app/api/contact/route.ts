@@ -5,6 +5,7 @@ import { getDb } from "../../../lib/mongodb";
 import { Resend } from "resend";
 import { checkRateLimit, getClientIp } from "../../../lib/rateLimit";
 import { cleanText, escapeHtml } from "../../../lib/validate";
+import { BUDGET_OPTIONS, TIMELINE_OPTIONS, pickOption, optionLabel } from "../../../lib/leadOptions";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -35,6 +36,9 @@ export async function POST(request: Request) {
     const email = cleanText(body.email, 254);
     const phone = cleanText(body.phone, 30);
     const service = cleanText(body.service, 50) || "other";
+    // Optional dropdowns: only the known values are accepted, anything else becomes ""
+    const budget = pickOption(BUDGET_OPTIONS, body.budget);
+    const timeline = pickOption(TIMELINE_OPTIONS, body.timeline);
     const message = cleanText(body.message, 5000, { multiline: true });
 
     // Validation
@@ -59,6 +63,8 @@ export async function POST(request: Request) {
       email,
       phone,
       service,
+      budget,
+      timeline,
       message,
       status: "NEW",
       createdAt: new Date(),
@@ -81,6 +87,8 @@ export async function POST(request: Request) {
             <tr><td style="padding:8px 0;color:#94a3b8">Email</td><td style="padding:8px 0"><a href="mailto:${escapeHtml(email)}" style="color:#00f0ff">${escapeHtml(email)}</a></td></tr>
             <tr><td style="padding:8px 0;color:#94a3b8">Phone</td><td style="padding:8px 0;color:#fff">${escapeHtml(phone) || "—"}</td></tr>
             <tr><td style="padding:8px 0;color:#94a3b8">Service</td><td style="padding:8px 0;color:#b026ff;font-weight:600;text-transform:uppercase">${escapeHtml(service)}</td></tr>
+            <tr><td style="padding:8px 0;color:#94a3b8">Budget</td><td style="padding:8px 0;color:#fff">${escapeHtml(optionLabel(BUDGET_OPTIONS, budget)) || "—"}</td></tr>
+            <tr><td style="padding:8px 0;color:#94a3b8">Timeline</td><td style="padding:8px 0;color:#fff">${escapeHtml(optionLabel(TIMELINE_OPTIONS, timeline)) || "—"}</td></tr>
             <tr><td style="padding:8px 0;color:#94a3b8;vertical-align:top">Message</td><td style="padding:8px 0;color:#e2e8f0;line-height:1.6">${escapeHtml(message).replace(/\n/g, "<br />")}</td></tr>
           </table>
           <div style="margin-top:32px;padding-top:24px;border-top:1px solid rgba(255,255,255,0.1)">
