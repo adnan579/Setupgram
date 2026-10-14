@@ -6,6 +6,7 @@ import Link from "next/link";
 import { cache } from "react";
 import JobApplyForm from "../../JobApplyForm";
 import { formatDateLong as fmt } from "../../../../lib/utils";
+import { DEFAULT_OG_IMAGE } from "../../../../lib/seo";
 
 interface Props {
   params: { slug: string };
@@ -38,6 +39,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: job.metaDescription || job.excerpt,
       type: "website",
       url: `https://setupgram.com/career/jobs/${job.slug}`,
+      images: [DEFAULT_OG_IMAGE],
     },
     alternates: { canonical: `https://setupgram.com/career/jobs/${job.slug}` },
   };

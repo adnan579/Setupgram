@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Careers",
   description:
     "Join SetupGram Infotech Solutions. Explore open roles, our work culture, and why builders choose to grow their careers with us.",
+  alternates: { canonical: "/career" },
 };
 
 // Cached and refreshed at most every 60s; admin saves refresh it instantly (lib/revalidate.ts)

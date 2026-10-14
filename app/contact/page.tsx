@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "Contact Us",
   description:
     "Get in touch with SetupGram Infotech Solutions to discuss your app, AI chatbot, CRM, or digital strategy project.",
+  alternates: { canonical: "/contact" },
 };
 
 const contactInfo = [

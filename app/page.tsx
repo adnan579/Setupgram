@@ -6,11 +6,14 @@ import type { Metadata } from "next";
 import { siteConfig, whatsappHref } from "../lib/siteConfig";
 import { testimonials } from "../lib/testimonials";
 import { clients } from "../lib/clients";
+import JsonLd from "../components/JsonLd";
+import { organizationJsonLd, websiteJsonLd } from "../lib/seo";
 
 export const metadata: Metadata = {
   title: "SetupGram Infotech Solutions | AI-Driven Business Solutions",
   description:
     "SetupGram helps businesses grow online with AI chatbots, custom app development, CRM, advertising campaigns, and strategic digital consulting.",
+  alternates: { canonical: "/" },
 };
 
 const services = [
@@ -22,6 +25,7 @@ const services = [
     ),
     color: "primary",
     title: "App Development",
+    slug: "app-development",
     description: "End-to-end building of fast, scalable Web, Android, and iOS applications tailored to your business needs.",
   },
   {
@@ -33,6 +37,7 @@ const services = [
     ),
     color: "secondary",
     title: "Digital Marketing",
+    slug: "digital-marketing",
     description: "Data-driven SEO, social media campaigns, and performance marketing strategies designed to drive real ROI.",
   },
   {
@@ -43,6 +48,7 @@ const services = [
     ),
     color: "white",
     title: "CRM Solutions",
+    slug: "crm-solutions",
     description: "Streamline your operations and manage customer relationships effortlessly with custom CRM integrations.",
   },
   {
@@ -54,6 +60,7 @@ const services = [
     color: "gradient",
     core: true,
     title: "AI Chatbots",
+    slug: "ai-chatbot-integration",
     description: "Intelligent AI chatbot integration for existing and new applications or websites to automate support and sales.",
   },
   {
@@ -64,6 +71,7 @@ const services = [
     ),
     color: "advertising",
     title: "Advertising",
+    slug: "advertising",
     description: "High-impact paid ad campaigns across Google, Meta, Instagram, LinkedIn, YouTube & more — full-funnel strategy from creative to conversions.",
   },
   {
@@ -74,6 +82,7 @@ const services = [
     ),
     color: "white",
     title: "Business Consulting",
+    slug: "business-consulting",
     description: "Strategic roadmaps and market-entry plans for businesses transitioning online and scaling their digital footprint.",
   },
 ];
@@ -107,6 +116,7 @@ const adPlatforms = [
 export default function Home() {
   return (
     <>
+      <JsonLd data={[organizationJsonLd(), websiteJsonLd()]} />
       {/* ── Hero ── */}
       <section id="home" className="relative z-10 flex items-center justify-center min-h-screen px-6 text-center pt-20 overflow-hidden">
         {/* The one soft glow on the page: a plain CSS gradient (no blur filter, no animation) */}
@@ -198,9 +208,10 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {services.map((s) => (
-              <div
+              <Link
                 key={s.title}
-                className={`glass-panel p-8 rounded-2xl hover:-translate-y-2 transition-transform duration-300 group relative overflow-hidden ${s.core ? "border-primary/30" : ""}`}
+                href={`/services/${s.slug}`}
+                className={`glass-panel p-8 rounded-2xl hover:-translate-y-2 transition-transform duration-300 group relative overflow-hidden block ${s.core ? "border-primary/30" : ""}`}
               >
                 {s.core && (
                   <div className="absolute top-0 right-0 p-2 bg-primary text-dark text-xs font-bold rounded-bl-lg">CORE</div>
@@ -219,8 +230,12 @@ export default function Home() {
                   {s.icon}
                 </div>
                 <h3 className="text-xl font-bold text-white mb-3">{s.title}</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">{s.description}</p>
-              </div>
+                <p className="text-gray-400 text-sm leading-relaxed mb-4">{s.description}</p>
+                <span className="text-sm font-semibold text-primary">
+                  Learn more<span aria-hidden="true"> →</span>
+                  <span className="sr-only"> about {s.title}</span>
+                </span>
+              </Link>
             ))}
           </div>
         </div>

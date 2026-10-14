@@ -89,6 +89,11 @@ export default function BlogEditor({ initial }: { initial?: BlogPost }) {
     }, 0);
   }, [form.content]);
 
+  // Makes alt text safe inside a double-quoted HTML attribute
+  function escapeAttr(value: string) {
+    return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
   // Called when admin picks media from the uploader panel
   const handleMediaInsert = useCallback((media: UploadedMedia) => {
     if (mediaInsertTarget === "cover") {
@@ -103,7 +108,7 @@ export default function BlogEditor({ initial }: { initial?: BlogPost }) {
       );
     } else {
       insertAtCursor(
-        `<img src="${media.url}" alt="" style="width:100%;max-width:800px;border-radius:8px;margin:1rem 0" loading="lazy" />`
+        `<img src="${media.url}" alt="${escapeAttr(media.alt || "")}" style="width:100%;max-width:800px;border-radius:8px;margin:1rem 0" loading="lazy" />`
       );
     }
     setShowMediaPanel(false);

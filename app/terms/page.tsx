@@ -8,6 +8,7 @@ import { siteConfig } from "../../lib/siteConfig";
 export const metadata: Metadata = {
   title: "Terms of Service",
   description: "The terms that apply when you use the SetupGram Infotech Solutions website.",
+  alternates: { canonical: "/terms" },
 };
 
 // NOTE FOR THE SITE OWNER: have a lawyer review these terms (especially governing law and

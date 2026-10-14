@@ -9,6 +9,7 @@ import { siteConfig } from "../../lib/siteConfig";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description: "How SetupGram Infotech Solutions collects, uses and protects personal information.",
+  alternates: { canonical: "/privacy" },
 };
 
 // NOTE FOR THE SITE OWNER: this policy was written from what the website actually does

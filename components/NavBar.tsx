@@ -5,14 +5,21 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { caseStudies } from "../lib/caseStudies";
 
 const navLinks = [
   { href: "/", label: "HOME" },
   { href: "/about", label: "ABOUT" },
-  { href: "/#services", label: "SERVICES" },
-  { href: "/#consulting", label: "CONSULTING" },
+  { href: "/services", label: "SERVICES" },
+  // Shown only once real case studies exist (lib/caseStudies.ts)
+  ...(caseStudies.length > 0 ? [{ href: "/work", label: "WORK" }] : []),
+  { href: "/blog", label: "BLOG" },
   { href: "/career", label: "CAREERS" },
 ];
+
+// A section is "current" for its own page and everything beneath it (e.g. a blog post)
+const isCurrent = (pathname: string, href: string) =>
+  href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
 export default function NavBar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -52,9 +59,9 @@ export default function NavBar() {
             <Link
               key={href}
               href={href}
-              aria-current={pathname === href && !href.includes("#") ? "page" : undefined}
+              aria-current={isCurrent(pathname, href) ? (pathname === href ? "page" : "true") : undefined}
               className={`hover:text-primary transition-colors ${
-                pathname === href && !href.includes("#") ? "text-primary" : ""
+                isCurrent(pathname, href) ? "text-primary" : ""
               }`}
             >
               {label}
@@ -116,9 +123,9 @@ export default function NavBar() {
             <Link
               key={href}
               href={href}
-              aria-current={pathname === href && !href.includes("#") ? "page" : undefined}
+              aria-current={isCurrent(pathname, href) ? (pathname === href ? "page" : "true") : undefined}
               className={`text-sm font-semibold tracking-wide hover:text-primary transition-colors py-1 ${
-                pathname === href && !href.includes("#")
+                isCurrent(pathname, href)
                   ? "text-primary"
                   : "text-white"
               }`}

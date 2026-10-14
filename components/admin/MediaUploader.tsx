@@ -12,6 +12,8 @@ export type UploadedMedia = {
   height?: number;
   format?: string;
   bytes?: number;
+  /** Image description for screen readers and search engines (alt text). */
+  alt?: string;
 };
 
 interface Props {
@@ -27,6 +29,9 @@ function formatBytes(bytes: number) {
 
 export default function MediaUploader({ onInsert, accept = "both" }: Props) {
   const [dragging, setDragging] = useState(false);
+  // Alt text typed before upload/insert. A ref so the long-lived upload callback always sees the latest value.
+  const [altText, setAltText] = useState("");
+  const altRef = useRef("");
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
@@ -162,6 +167,7 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
                   height: result.height,
                   format: result.format,
                   bytes: result.bytes,
+                  alt: altRef.current.trim(),
                 };
                 setUploaded((prev) => [media, ...prev]);
                 onInsert(media);
@@ -230,6 +236,7 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
       url: urlInput.trim(),
       publicId: "",
       type: isVideo ? "video" : "image",
+      alt: altRef.current.trim(),
     };
     onInsert(media);
     setUrlInput("");
@@ -259,6 +266,30 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
           </button>
         ))}
       </div>
+
+      {accept !== "video" && (
+        <div className="px-4 pt-4">
+          <label htmlFor="media-alt" className="block text-xs text-gray-400 uppercase tracking-wide font-semibold mb-1.5">
+            Image description (alt text)
+          </label>
+          <input
+            id="media-alt"
+            type="text"
+            value={altText}
+            maxLength={200}
+            onChange={(e) => {
+              setAltText(e.target.value);
+              altRef.current = e.target.value;
+            }}
+            className="w-full px-3 py-2 rounded-lg text-sm"
+            placeholder="e.g. Dashboard showing monthly leads"
+          />
+          <p className="text-xs text-gray-400 mt-1.5">
+            Fill this in <strong>before</strong> you upload or insert an image. It helps screen-reader users and Google
+            Images. Leave it empty only for purely decorative images.
+          </p>
+        </div>
+      )}
 
       <div className="p-4">
         {/* ── Upload Tab ── */}
@@ -454,7 +485,7 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
                 {uploaded.map((m, i) => (
                   <button
                     key={i}
-                    onClick={() => onInsert(m)}
+                    onClick={() => onInsert({ ...m, alt: altRef.current.trim() || m.alt })}
                     title={`Click to insert • ${m.format?.toUpperCase()} • ${
                       m.bytes ? formatBytes(m.bytes) : ""
                     }`}

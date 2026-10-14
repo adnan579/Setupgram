@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: "About Us",
   description:
     "Learn about SetupGram Infotech Solutions — our mission, our team, and how we help businesses thrive in the digital world.",
+  alternates: { canonical: "/about" },
 };
 
 // Cached and refreshed at most every 60s; admin saves refresh it instantly (lib/revalidate.ts)

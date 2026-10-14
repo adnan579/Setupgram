@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Verify a Certificate",
   description:
     "Verify the authenticity of any internship, training, hackathon, or event certificate issued by SetupGram Infotech Solutions.",
+  alternates: { canonical: "/career/verify" },
 };
 
 export default function VerifyPage() {

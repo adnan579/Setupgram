@@ -7,8 +7,8 @@ import CookieSettingsButton from "./CookieSettingsButton";
 const footerLinks = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About" },
-  { href: "/#services", label: "Services" },
-  { href: "/#consulting", label: "Consulting" },
+  { href: "/services", label: "Services" },
+  { href: "/blog", label: "Blog" },
   { href: "/career", label: "Careers" },
   { href: "/contact", label: "Contact" },
 ];
