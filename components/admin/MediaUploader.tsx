@@ -318,7 +318,7 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                  <p className="text-xs text-gray-600">{progress}%</p>
+                  <p className="text-xs text-gray-500">{progress}%</p>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -360,7 +360,7 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
                       or <span className="text-primary">click to browse</span>
                     </p>
                   </div>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-gray-500">
                     {accept === "video"
                       ? "MP4, WebM, MOV up to 100MB"
                       : accept === "image"
@@ -440,7 +440,7 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
         {tab === "library" && (
           <div>
             {uploaded.length === 0 ? (
-              <p className="text-center text-gray-600 text-sm py-8">
+              <p className="text-center text-gray-500 text-sm py-8">
                 No uploads yet in this session.{" "}
                 <button
                   onClick={() => setTab("upload")}
@@ -463,7 +463,7 @@ export default function MediaUploader({ onInsert, accept = "both" }: Props) {
                     {m.type === "video" ? (
                       <div className="w-full h-full flex items-center justify-center bg-secondary/10">
                         <svg
-                          className="w-8 h-8 text-secondary"
+                          className="w-8 h-8 text-secondary-light"
                           fill="currentColor"
                           viewBox="0 0 24 24"
                         >

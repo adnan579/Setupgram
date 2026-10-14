@@ -1,7 +1,11 @@
 /** @format */
 
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
+import { siteConfig, whatsappHref } from "../lib/siteConfig";
+import { testimonials } from "../lib/testimonials";
+import { clients } from "../lib/clients";
 
 export const metadata: Metadata = {
   title: "SetupGram Infotech Solutions | AI-Driven Business Solutions",
@@ -74,32 +78,21 @@ const services = [
   },
 ];
 
-const testimonials = [
-  {
-    quote: "SetupGram transformed our brick-and-mortar store into a thriving e-commerce brand in under 3 months. Their team truly understood our vision.",
-    name: "Rohan Mehta",
-    role: "Founder, Kalakar Crafts",
-    accent: "primary",
-  },
-  {
-    quote: "The AI chatbot they deployed reduced our support tickets by 60%. We now handle 3× the customer volume with the same team size.",
-    name: "Priya Sharma",
-    role: "COO, NovaPay Fintech",
-    accent: "secondary",
-  },
-  {
-    quote: "Their Google and Meta ad campaigns delivered 4× ROAS in the first month. Best advertising investment we've made.",
-    name: "Vikram Joshi",
-    role: "Marketing Head, GrowFast D2C",
-    accent: "primary",
-  },
+// Facts the site already states elsewhere (contact page, services list). No performance
+// numbers here on purpose: add figures like "projects delivered" or "ROAS" only once you can
+// back them up with real, documented results.
+const highlights = [
+  { value: "6", label: "Core Services" },
+  { value: "3", label: "App Platforms (Web, Android, iOS)" },
+  { value: "24h", label: "Enquiry Response Time" },
+  { value: "AI", label: "Chatbots Are Our Core" },
 ];
 
-const stats = [
-  { value: "100+", label: "Projects Delivered" },
-  { value: "4×", label: "Avg. Ad Campaign ROAS" },
-  { value: "24/7", label: "Support Availability" },
-  { value: "60%", label: "Avg. Support Cost Reduction" },
+const process = [
+  { title: "Tell us your goals", text: "Send a short enquiry. We review it and reply within 24 hours." },
+  { title: "Discovery call", text: "A team member learns about your business and what success looks like for you." },
+  { title: "Tailored proposal", text: "You get a clear plan and quote, with no obligation to proceed." },
+  { title: "Build, launch, improve", text: "We stay involved after delivery, measuring results and iterating with you." },
 ];
 
 const adPlatforms = [
@@ -115,9 +108,14 @@ export default function Home() {
   return (
     <>
       {/* ── Hero ── */}
-      <section id="home" className="relative z-10 flex items-center justify-center min-h-screen px-6 text-center pt-20">
-        <div className="max-w-4xl mx-auto">
-          <div className="inline-block px-4 py-1.5 mb-6 rounded-full border border-secondary/50 bg-secondary/10 text-secondary text-sm font-medium tracking-wide">
+      <section id="home" className="relative z-10 flex items-center justify-center min-h-screen px-6 text-center pt-20 overflow-hidden">
+        {/* The one soft glow on the page: a plain CSS gradient (no blur filter, no animation) */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_45%_at_50%_35%,rgba(0,240,255,0.10),transparent_70%)]"
+        />
+        <div className="relative max-w-4xl mx-auto">
+          <div className="inline-block px-4 py-1.5 mb-6 rounded-full border border-secondary/50 bg-secondary/10 text-secondary-light text-sm font-medium tracking-wide">
             Cutting-Edge AI Technological Solutions
           </div>
           <h1 className="font-display text-5xl md:text-7xl font-bold mb-6 leading-tight text-white">
@@ -128,26 +126,36 @@ export default function Home() {
             We integrate next-generation artificial intelligence with strategic consulting to create a roadmap for your success — from day one.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/#services" className="px-8 py-4 rounded-full bg-primary text-dark font-bold hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] transition-all w-full sm:w-auto">
+            <Link href="/contact" className="px-8 py-4 rounded-full bg-primary text-dark font-bold hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] transition-all w-full sm:w-auto">
+              Book a Free Consultation
+            </Link>
+            <Link href="/#services" className="px-8 py-4 rounded-full border border-white/30 text-white font-semibold hover:bg-white/10 transition-all w-full sm:w-auto">
               Explore Services
             </Link>
-            <Link href="/#consulting" className="px-8 py-4 rounded-full glass-panel hover:bg-white/5 transition-all w-full sm:w-auto">
-              Strategic Consulting
-            </Link>
           </div>
-          <div className="mt-20 flex flex-col items-center gap-2 text-gray-600 text-xs tracking-widest animate-pulse-slow">
-            <span>SCROLL</span>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
+          <p className="mt-5 text-sm text-gray-400">
+            Free and no-obligation · We reply within 24 hours
+          </p>
+          {whatsappHref() && (
+            <p className="mt-2 text-sm text-gray-400">
+              Prefer a quick chat?{" "}
+              <a
+                href={whatsappHref("Hi SetupGram, I'd like a free consultation.")}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline underline-offset-2 hover:text-white"
+              >
+                Message us on WhatsApp
+              </a>
+            </p>
+          )}
         </div>
       </section>
 
       {/* ── Stats Bar ── */}
       <section className="relative z-10 py-8 px-6 border-y border-white/5 bg-dark/60">
         <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-0 md:divide-x md:divide-white/10">
-          {stats.map(({ value, label }) => (
+          {highlights.map(({ value, label }) => (
             <div key={label} className="text-center px-6 py-2">
               <p className="font-display text-3xl font-bold text-primary mb-1">{value}</p>
               <p className="text-xs text-gray-500 tracking-wide uppercase">{label}</p>
@@ -155,6 +163,27 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      {/* ── Client logos (shown only once real, permitted logos are added in lib/clients.ts) ── */}
+      {clients.length > 0 && (
+        <section aria-label="Clients" className="relative z-10 py-10 px-6 border-b border-white/5">
+          <p className="text-center text-xs text-gray-400 tracking-widest uppercase mb-6">Trusted by</p>
+          <ul className="max-w-5xl mx-auto flex flex-wrap items-center justify-center gap-x-12 gap-y-6">
+            {clients.map((c) => (
+              <li key={c.name}>
+                <Image
+                  src={c.logo}
+                  alt={c.name}
+                  width={c.width ?? 120}
+                  height={c.height ?? 40}
+                  unoptimized
+                  className="h-8 w-auto opacity-80"
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* ── Services ── */}
       <section id="services" className="relative z-10 py-24 px-6 bg-dark/50">
@@ -184,7 +213,7 @@ export default function Home() {
                     : s.color === "primary"
                     ? "bg-primary/20 text-primary"
                     : s.color === "secondary"
-                    ? "bg-secondary/20 text-secondary"
+                    ? "bg-secondary/20 text-secondary-light"
                     : "bg-white/10 text-white"
                 }`}>
                   {s.icon}
@@ -210,10 +239,10 @@ export default function Home() {
             </p>
             <div className="grid grid-cols-2 gap-4 mb-8">
               {[
-                { stat: "4×", label: "Average ROAS" },
-                { stat: "2×", label: "Conversion Rate Lift" },
-                { stat: "30%", label: "Lower Cost Per Lead" },
-                { stat: "All", label: "Major Platforms" },
+                { stat: "6", label: "Ad Platforms" },
+                { stat: "A/B", label: "Tested Creatives" },
+                { stat: "Daily", label: "Optimization" },
+                { stat: "Full", label: "Funnel Strategy" },
               ].map(({ stat, label }) => (
                 <div key={label} className="glass-panel rounded-xl p-4 border border-white/5">
                   <p className="font-display text-2xl font-bold text-orange-400">{stat}</p>
@@ -238,7 +267,7 @@ export default function Home() {
                 ))}
               </div>
               <div className="mt-6 pt-5 border-t border-white/5">
-                <p className="text-xs text-gray-600 text-center">Full-funnel: strategy → creative → targeting → optimization → reporting</p>
+                <p className="text-xs text-gray-500 text-center">Full-funnel: strategy → creative → targeting → optimization → reporting</p>
               </div>
             </div>
           </div>
@@ -250,9 +279,8 @@ export default function Home() {
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16">
           <div className="lg:w-1/2">
             <div className="relative w-full aspect-square max-w-md mx-auto">
-              <div className="absolute inset-0 border border-secondary/30 rounded-full animate-[spin_10s_linear_infinite]" />
-              <div className="absolute inset-4 border border-primary/40 rounded-full animate-[spin_15s_linear_infinite_reverse] border-dashed" />
-              <div className="absolute inset-8 border border-white/5 rounded-full animate-[spin_20s_linear_infinite]" />
+              <div aria-hidden="true" className="absolute inset-0 border border-secondary/30 rounded-full" />
+              <div aria-hidden="true" className="absolute inset-4 border border-primary/40 rounded-full border-dashed" />
               <div className="absolute inset-0 flex items-center justify-center glass-panel rounded-full m-12">
                 <div className="text-center">
                   <span className="block font-display text-4xl text-white font-bold">Strategy</span>
@@ -262,9 +290,9 @@ export default function Home() {
             </div>
           </div>
           <div className="lg:w-1/2">
-            <p className="text-xs text-secondary font-semibold tracking-widest uppercase mb-4">Business Consulting</p>
+            <p className="text-xs text-secondary-light font-semibold tracking-widest uppercase mb-4">Business Consulting</p>
             <h2 className="font-display text-4xl font-bold mb-6 text-white">
-              Strategic Consulting for <br /><span className="text-secondary">Future-Ready</span> Ventures
+              Strategic Consulting for <br /><span className="text-secondary-light">Future-Ready</span> Ventures
             </h2>
             <p className="text-gray-400 text-lg mb-6 leading-relaxed">
               SetupGram isn't just about code — it's about business growth. We provide strategic advice rooted in market realities, not templates.
@@ -293,37 +321,59 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Testimonials ── */}
-      <section id="testimonials" className="relative z-10 py-24 px-6 border-t border-white/5">
-        <div className="max-w-7xl mx-auto">
-          <p className="text-center text-xs text-secondary font-semibold tracking-widest uppercase mb-3">Client Stories</p>
-          <h2 className="font-display text-4xl font-bold text-white text-center mb-4">
-            Results That <span className="text-secondary">Speak</span>
-          </h2>
-          <p className="text-center text-gray-400 max-w-xl mx-auto mb-16">
-            Don't take our word for it — here's what our clients say after working with us.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map(({ quote, name, role, accent }) => (
-              <div key={name} className="glass-panel p-8 rounded-2xl flex flex-col gap-6 hover:-translate-y-1 transition-transform duration-300">
-                <svg className={`w-8 h-8 ${accent === "primary" ? "text-primary" : "text-secondary"} opacity-50`} fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
-                </svg>
-                <p className="text-gray-300 leading-relaxed flex-1 italic">"{quote}"</p>
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-dark text-sm ${accent === "primary" ? "bg-primary" : "bg-secondary"}`}>
-                    {name[0]}
-                  </div>
-                  <div>
-                    <p className="text-white font-semibold text-sm">{name}</p>
-                    <p className="text-gray-500 text-xs">{role}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
+      {/* ── Client stories (only when real, permitted testimonials exist in lib/testimonials.ts) ── */}
+      {testimonials.length > 0 ? (
+        <section id="testimonials" className="relative z-10 py-24 px-6 border-t border-white/5">
+          <div className="max-w-7xl mx-auto">
+            <p className="text-center text-xs text-secondary-light font-semibold tracking-widest uppercase mb-3">Client Stories</p>
+            <h2 className="font-display text-4xl font-bold text-white text-center mb-16">
+              What Clients <span className="text-secondary-light">Say</span>
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {testimonials.map(({ quote, name, role }, i) => {
+                const accent = i % 2 === 0 ? "primary" : "secondary";
+                return (
+                  <figure key={name} className="glass-panel p-8 rounded-2xl flex flex-col gap-6">
+                    <blockquote className="text-gray-300 leading-relaxed flex-1 italic">&ldquo;{quote}&rdquo;</blockquote>
+                    <figcaption className="flex items-center gap-3">
+                      <div aria-hidden="true" className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-dark text-sm ${accent === "primary" ? "bg-primary" : "bg-secondary-light"}`}>
+                        {name[0]}
+                      </div>
+                      <div>
+                        <p className="text-white font-semibold text-sm">{name}</p>
+                        <p className="text-gray-400 text-xs">{role}</p>
+                      </div>
+                    </figcaption>
+                  </figure>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : (
+        <section id="how-we-work" className="relative z-10 py-24 px-6 border-t border-white/5">
+          <div className="max-w-7xl mx-auto">
+            <p className="text-center text-xs text-secondary-light font-semibold tracking-widest uppercase mb-3">How We Work</p>
+            <h2 className="font-display text-4xl font-bold text-white text-center mb-4">
+              From First Message to <span className="text-secondary-light">Launch</span>
+            </h2>
+            <p className="text-center text-gray-400 max-w-xl mx-auto mb-16">
+              A simple, transparent process, so you always know what happens next.
+            </p>
+            <ol className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {process.map(({ title, text }, i) => (
+                <li key={title} className="glass-panel p-8 rounded-2xl">
+                  <span aria-hidden="true" className="block font-display text-4xl font-bold text-primary mb-4">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
+                  <p className="text-gray-400 text-sm leading-relaxed">{text}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+      )}
 
       {/* ── CTA Banner ── */}
       <section className="relative z-10 py-24 px-6 border-t border-white/5">
@@ -339,11 +389,25 @@ export default function Home() {
                 Whether it's a mobile app, an AI integration, a paid ad campaign, or a complete digital strategy — we're here to make it happen.
               </p>
               <Link href="/contact" className="inline-flex items-center px-10 py-4 rounded-full bg-primary text-dark font-bold hover:shadow-[0_0_30px_rgba(0,240,255,0.5)] transition-all text-lg gap-2">
-                Start the Conversation
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                Book a Free Consultation
+                <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </Link>
+              {(whatsappHref() || siteConfig.phone) && (
+                <div className="mt-6 flex flex-wrap justify-center gap-x-8 gap-y-2 text-sm text-gray-300">
+                  {whatsappHref() && (
+                    <a href={whatsappHref()} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2 hover:text-white">
+                      Chat on WhatsApp
+                    </a>
+                  )}
+                  {siteConfig.phone && (
+                    <a href={siteConfig.phoneHref} className="text-primary underline underline-offset-2 hover:text-white">
+                      Call {siteConfig.phone}
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -135,11 +135,11 @@ export default async function CareersPage() {
 
       <section className="py-16 px-6 border-t border-white/5">
         <div className="max-w-7xl mx-auto">
-          <p className="text-center text-xs text-secondary font-semibold tracking-widest uppercase mb-3">
+          <p className="text-center text-xs text-secondary-light font-semibold tracking-widest uppercase mb-3">
             Life at SetupGram
           </p>
           <h2 className="font-display text-4xl font-bold text-white text-center mb-4">
-            Why People <span className="text-secondary">Join Us</span>
+            Why People <span className="text-secondary-light">Join Us</span>
           </h2>
           <p className="text-center text-gray-400 max-w-2xl mx-auto mb-16">
             We believe great work comes from people who are rested, trusted, and
@@ -202,7 +202,7 @@ export default async function CareersPage() {
             Don't see a perfect fit? Email us at{" "}
             <a
               href="mailto:careers@setupgram.com"
-              className="text-primary hover:underline"
+              className="text-primary underline underline-offset-2 hover:text-white"
             >
               careers@setupgram.com
             </a>{" "}
@@ -212,7 +212,7 @@ export default async function CareersPage() {
           {jobs.length === 0 ? (
             <div className="glass-panel rounded-2xl p-16 text-center border border-white/5">
               <p className="text-gray-400 mb-2">No open positions right now.</p>
-              <p className="text-gray-600 text-sm">
+              <p className="text-gray-500 text-sm">
                 Check back soon, or send us your resume anyway.
               </p>
             </div>
@@ -269,7 +269,7 @@ export default async function CareersPage() {
         <div className="max-w-4xl mx-auto glass-panel rounded-2xl p-8 md:p-12 border border-secondary/10 text-center relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-secondary/5 to-primary/5 rounded-2xl" />
           <div className="relative z-10">
-            <p className="text-xs text-secondary font-semibold tracking-widest uppercase mb-3">
+            <p className="text-xs text-secondary-light font-semibold tracking-widest uppercase mb-3">
               Alumni & Interns
             </p>
             <h2 className="font-display text-3xl font-bold text-white mb-4">

@@ -1,6 +1,7 @@
 /** @format */
 import { MetadataRoute } from "next";
 import { getDb } from "../lib/mongodb";
+import { LEGAL_LAST_UPDATED } from "../lib/siteConfig";
 
 // Without this the sitemap is generated once at build time and new posts/jobs never appear in it.
 export const revalidate = 3600;
@@ -26,6 +27,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.7,
+    },
+    {
+      url: `${base}/privacy`,
+      lastModified: new Date(LEGAL_LAST_UPDATED),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${base}/terms`,
+      lastModified: new Date(LEGAL_LAST_UPDATED),
+      changeFrequency: "yearly",
+      priority: 0.3,
     },
     {
       url: `${base}/career`,

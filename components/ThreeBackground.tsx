@@ -72,7 +72,7 @@ export default function ThreeBackground() {
 
   return (
     <div
-      className="fixed inset-0 z-[-1] pointer-events-none opacity-60"
+      className="fixed inset-0 z-[-1] pointer-events-none opacity-40"
       aria-hidden="true"
     >
       <Canvas

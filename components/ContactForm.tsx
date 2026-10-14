@@ -3,6 +3,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { BUDGET_OPTIONS, TIMELINE_OPTIONS } from "../lib/leadOptions";
 
 type FormState = "idle" | "loading" | "success" | "error";
 
@@ -22,6 +24,8 @@ export default function ContactForm() {
       email: formData.get("email"),
       phone: formData.get("phone"),
       service: formData.get("service"),
+      budget: formData.get("budget"),
+      timeline: formData.get("timeline"),
       message: formData.get("message"),
     };
 
@@ -54,8 +58,8 @@ export default function ContactForm() {
 
   if (state === "success") {
     return (
-      <div className="glass-panel rounded-2xl p-10 flex flex-col items-center justify-center text-center min-h-[480px]">
-        <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-5 text-primary">
+      <div role="status" className="glass-panel rounded-2xl p-10 flex flex-col items-center justify-center text-center min-h-[480px]">
+        <div aria-hidden="true" className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-5 text-primary">
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
@@ -65,6 +69,7 @@ export default function ContactForm() {
           Thanks for reaching out. We'll get back to you within 24 hours.
         </p>
         <button
+          type="button"
           onClick={() => setState("idle")}
           className="text-sm text-primary hover:text-white transition-colors underline underline-offset-4"
         >
@@ -149,6 +154,56 @@ export default function ContactForm() {
           </select>
         </div>
 
+        {/* Budget + timeline (optional; they help us prepare a useful first reply) */}
+        <div className="grid sm:grid-cols-2 gap-5">
+          <div>
+            <label htmlFor="budget" className="block text-sm font-medium text-gray-400 mb-2">
+              Estimated budget
+            </label>
+            <select
+              id="budget"
+              name="budget"
+              defaultValue=""
+              className="w-full px-4 py-3 rounded-lg appearance-none cursor-pointer"
+              style={{
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                color: "white",
+              }}
+            >
+              <option value="" style={{ background: "#050505" }}>Select a range…</option>
+              {BUDGET_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value} style={{ background: "#050505" }}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="timeline" className="block text-sm font-medium text-gray-400 mb-2">
+              Desired timeline
+            </label>
+            <select
+              id="timeline"
+              name="timeline"
+              defaultValue=""
+              className="w-full px-4 py-3 rounded-lg appearance-none cursor-pointer"
+              style={{
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                color: "white",
+              }}
+            >
+              <option value="" style={{ background: "#050505" }}>Select a timeline…</option>
+              {TIMELINE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value} style={{ background: "#050505" }}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         {/* Message */}
         <div>
           <label htmlFor="message" className="block text-sm font-medium text-gray-400 mb-2">
@@ -166,10 +221,20 @@ export default function ContactForm() {
 
         {/* Error message */}
         {state === "error" && (
-          <p className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3">
+          <p role="alert" className="text-red-300 text-sm bg-red-400/10 border border-red-400/30 rounded-lg px-4 py-3">
             {errorMsg}
           </p>
         )}
+
+        {/* Consent notice (a notice, not a tick-box: we only use the details to reply to the enquiry) */}
+        <p className="text-xs text-gray-400 leading-relaxed">
+          By sending this message you agree that SetupGram may use your details to reply to your
+          enquiry, as described in our{" "}
+          <Link href="/privacy" className="text-primary underline underline-offset-2 hover:text-white">
+            Privacy Policy
+          </Link>
+          .
+        </p>
 
         {/* Submit */}
         <button
@@ -180,6 +245,7 @@ export default function ContactForm() {
           {state === "loading" ? (
             <>
               <svg
+                aria-hidden="true"
                 className="animate-spin h-5 w-5 text-dark"
                 fill="none"
                 viewBox="0 0 24 24"

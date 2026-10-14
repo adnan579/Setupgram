@@ -82,7 +82,7 @@ export default function ApplicationsTable({
         </select>
       </div>
 
-      <p className="text-xs text-gray-600">
+      <p className="text-xs text-gray-500">
         Showing {filtered.length} of {applications.length} applications
       </p>
 
@@ -112,10 +112,10 @@ export default function ApplicationsTable({
                 <div className="flex-shrink-0 hidden sm:block">
                   <ApplicationStatusSelect id={a._id} initial={a.status} />
                 </div>
-                <div className="flex-shrink-0 hidden md:block text-xs text-gray-600">
+                <div className="flex-shrink-0 hidden md:block text-xs text-gray-500">
                   {fmt(a.createdAt)}
                 </div>
-                <button
+                <button type="button" aria-label="Toggle details" aria-expanded={expandedId === a._id}
                   onClick={() =>
                     setExpandedId(expandedId === a._id ? null : a._id)
                   }
@@ -135,10 +135,10 @@ export default function ApplicationsTable({
                     />
                   </svg>
                 </button>
-                <button
+                <button type="button" aria-label="Delete application"
                   onClick={() => handleDelete(a._id)}
                   disabled={deletingId === a._id}
-                  className="flex-shrink-0 text-gray-600 hover:text-red-400 transition-colors p-1 disabled:opacity-40"
+                  className="flex-shrink-0 text-gray-500 hover:text-red-400 transition-colors p-1 disabled:opacity-40"
                 >
                   <svg
                     className="w-4 h-4"

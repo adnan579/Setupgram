@@ -113,7 +113,7 @@ export default function CertificatesTable({
         </select>
       </div>
 
-      <p className="text-xs text-gray-600">
+      <p className="text-xs text-gray-500">
         Showing {filtered.length} of {certificates.length} certificates
       </p>
 
@@ -134,7 +134,7 @@ export default function CertificatesTable({
               key={c._id}
               className="glass-panel rounded-xl border border-white/5 px-5 py-4 flex items-center gap-4"
             >
-              <div className="w-9 h-9 rounded-full bg-secondary/20 text-secondary font-bold text-sm flex items-center justify-center flex-shrink-0">
+              <div className="w-9 h-9 rounded-full bg-secondary/20 text-secondary-light font-bold text-sm flex items-center justify-center flex-shrink-0">
                 {c.candidateName[0]?.toUpperCase()}
               </div>
 
@@ -143,7 +143,7 @@ export default function CertificatesTable({
                   <p className="font-medium text-white text-sm truncate">
                     {c.candidateName}
                   </p>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-secondary/10 text-secondary border border-secondary/20">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-secondary/10 text-secondary-light border border-secondary/20">
                     {TYPE_LABELS[c.type] || c.type}
                   </span>
                 </div>
@@ -164,12 +164,12 @@ export default function CertificatesTable({
                 {c.verificationStatus}
               </button>
 
-              <div className="flex-shrink-0 hidden md:block text-xs text-gray-600">
+              <div className="flex-shrink-0 hidden md:block text-xs text-gray-500">
                 {fmt(c.issueDate)}
               </div>
 
               <div className="flex items-center gap-1 flex-shrink-0">
-                <button
+                <button type="button" aria-label="Copy verification link"
                   onClick={() => copyLink(c.slug, c._id)}
                   className="p-2 text-gray-500 hover:text-primary transition-colors rounded-lg hover:bg-primary/10"
                   title="Copy verification link"
@@ -198,6 +198,7 @@ export default function CertificatesTable({
                   href={`/admin/careers/certificates/${c._id}`}
                   className="p-2 text-gray-500 hover:text-primary transition-colors rounded-lg hover:bg-primary/10"
                   title="Edit"
+                  aria-label="Edit"
                 >
                   <svg
                     className="w-4 h-4"
@@ -218,6 +219,7 @@ export default function CertificatesTable({
                   target="_blank"
                   className="p-2 text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-white/5"
                   title="View verification page"
+                  aria-label="View verification page"
                 >
                   <svg
                     className="w-4 h-4"
@@ -233,10 +235,10 @@ export default function CertificatesTable({
                     />
                   </svg>
                 </Link>
-                <button
+                <button type="button" aria-label="Delete"
                   onClick={() => handleDelete(c._id, c.candidateName)}
                   disabled={deletingId === c._id}
-                  className="p-2 text-gray-600 hover:text-red-400 transition-colors rounded-lg hover:bg-red-400/10 disabled:opacity-40"
+                  className="p-2 text-gray-500 hover:text-red-400 transition-colors rounded-lg hover:bg-red-400/10 disabled:opacity-40"
                   title="Delete"
                 >
                   <svg

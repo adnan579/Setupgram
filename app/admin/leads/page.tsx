@@ -13,6 +13,8 @@ type SerializedLead = {
   email: string;
   phone?: string;
   service?: string;
+  budget?: string;
+  timeline?: string;
   message: string;
   status: "NEW" | "CONTACTED" | "CONVERTED" | "LOST";
   createdAt: string;
@@ -32,6 +34,8 @@ export default async function LeadsPage() {
     email: l.email ?? "",
     phone: l.phone ?? "",
     service: l.service ?? "",
+    budget: l.budget ?? "",
+    timeline: l.timeline ?? "",
     message: l.message ?? "",
     status: (l.status as SerializedLead["status"]) ?? "NEW",
     createdAt:

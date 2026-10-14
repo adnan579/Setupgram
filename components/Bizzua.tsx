@@ -339,7 +339,14 @@ export default function Bizzua() {
   return (
     <>
       {/* ── Chat Window ── */}
+      {/* When closed the window is only faded out visually, so it must ALSO be removed from the
+          tab order and the accessibility tree (inert + aria-hidden), otherwise keyboard users
+          tab into invisible buttons. React 18 has no typed `inert` prop, hence the spread. */}
       <div
+        role="dialog"
+        aria-label="Bizzua chat assistant"
+        aria-hidden={!isOpen}
+        {...(!isOpen ? ({ inert: "" } as Record<string, string>) : {})}
         className={`fixed bottom-24 right-5 sm:right-6 z-[9999] transition-all duration-300 ease-out ${
           isOpen
             ? "opacity-100 translate-y-0 scale-100 pointer-events-auto"
@@ -348,7 +355,7 @@ export default function Bizzua() {
         style={{ width: "min(380px, calc(100vw - 20px))" }}
       >
         <div
-          className="flex flex-col rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(0,240,255,0.15)] border border-white/10"
+          className="flex flex-col rounded-2xl overflow-hidden shadow-2xl border border-white/10"
           style={{
             background: "#0a0a0f",
             maxHeight: "min(580px, calc(100vh - 120px))",
@@ -372,8 +379,10 @@ export default function Bizzua() {
             </div>
             <div className="flex items-center gap-1">
               <button
+                type="button"
                 onClick={handleReset}
                 title="New conversation"
+                aria-label="New conversation"
                 className="p-1.5 text-gray-500 hover:text-gray-300 rounded-lg hover:bg-white/5 transition-colors"
               >
                 <svg
@@ -391,8 +400,10 @@ export default function Bizzua() {
                 </svg>
               </button>
               <button
+                type="button"
                 onClick={handleMinimize}
                 title="Minimize"
+                aria-label="Minimize"
                 className="p-1.5 text-gray-500 hover:text-gray-300 rounded-lg hover:bg-white/5 transition-colors"
               >
                 <svg
@@ -410,8 +421,10 @@ export default function Bizzua() {
                 </svg>
               </button>
               <button
+                type="button"
                 onClick={handleClose}
                 title="Close"
+                aria-label="Close"
                 className="p-1.5 text-gray-500 hover:text-red-400 rounded-lg hover:bg-red-400/10 transition-colors"
               >
                 <svg
@@ -432,7 +445,11 @@ export default function Bizzua() {
           </div>
 
           {/* Messages */}
+          {/* role="log" + aria-live: screen readers announce each new reply as it arrives */}
           <div
+            role="log"
+            aria-live="polite"
+            aria-label="Conversation"
             className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0"
             style={{
               scrollbarWidth: "thin",
@@ -486,6 +503,7 @@ export default function Bizzua() {
               <input
                 ref={inputRef}
                 type="text"
+                aria-label="Message to Bizzua"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={
@@ -503,6 +521,7 @@ export default function Bizzua() {
               />
               <button
                 type="submit"
+                aria-label="Send message"
                 disabled={!canSend}
                 className="w-10 h-10 flex-shrink-0 rounded-xl bg-primary text-dark flex items-center justify-center hover:shadow-[0_0_15px_rgba(0,240,255,0.4)] transition-all disabled:opacity-40 disabled:cursor-not-allowed relative"
               >
@@ -547,8 +566,11 @@ export default function Bizzua() {
                 )}
               </button>
             </div>
-            <p className="text-center text-xs text-gray-700 mt-2">
-              Powered by Gemini AI · SetupGram
+            <p className="text-center text-xs text-gray-400 mt-2">
+              Powered by Gemini AI ·{" "}
+              <Link href="/privacy" className="underline underline-offset-2 hover:text-primary">
+                Privacy
+              </Link>
             </p>
           </form>
         </div>
@@ -556,21 +578,17 @@ export default function Bizzua() {
 
       {/* ── Launcher Button ── */}
       <button
+        type="button"
         onClick={handleOpen}
         aria-label="Open Bizzua chat assistant"
-        className={`fixed bottom-5 right-5 sm:right-6 z-[9999] w-14 h-14 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(0,240,255,0.3)] transition-all duration-300 hover:scale-110 active:scale-95 ${
+        aria-expanded={isOpen}
+        className={`fixed bottom-5 right-5 sm:right-6 z-[9999] w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 active:scale-95 ${
           isOpen
             ? "opacity-0 pointer-events-none scale-90"
             : "opacity-100 scale-100"
         }`}
         style={{ background: "linear-gradient(135deg, #00f0ff, #b026ff)" }}
       >
-        {showBadge && (
-          <div
-            className="absolute inset-0 rounded-full animate-ping"
-            style={{ background: "rgba(0,240,255,0.3)" }}
-          />
-        )}
         {unread > 0 && (
           <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
             {unread}

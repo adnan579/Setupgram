@@ -32,8 +32,9 @@ export default function NavBar() {
 
   return (
     <nav
-      className={`fixed w-full z-50 glass-panel border-b-0 border-white/10 transition-all duration-300 ${
-        scrolled ? "py-3 shadow-[0_4px_30px_rgba(0,240,255,0.05)]" : "py-4"
+      aria-label="Main"
+      className={`fixed w-full z-50 glass-nav border-b-0 border-white/10 transition-all duration-300 ${
+        scrolled ? "py-3 shadow-lg" : "py-4"
       }`}
     >
       <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
@@ -51,6 +52,7 @@ export default function NavBar() {
             <Link
               key={href}
               href={href}
+              aria-current={pathname === href && !href.includes("#") ? "page" : undefined}
               className={`hover:text-primary transition-colors ${
                 pathname === href && !href.includes("#") ? "text-primary" : ""
               }`}
@@ -60,32 +62,38 @@ export default function NavBar() {
           ))}
           <Link
             href="/contact"
+            aria-current={pathname === "/contact" ? "page" : undefined}
             className={`px-5 py-2 rounded-full border border-primary text-primary hover:bg-primary hover:text-dark transition-all ${
               pathname === "/contact" ? "bg-primary text-dark" : ""
             }`}
           >
-            LET'S TALK
+            BOOK A FREE CALL
           </Link>
         </div>
 
         {/* Mobile Hamburger Button */}
         <button
+          type="button"
           onClick={() => setIsOpen(!isOpen)}
-          aria-label="Toggle mobile menu"
+          aria-label={isOpen ? "Close menu" : "Open menu"}
           aria-expanded={isOpen}
-          className="md:hidden flex flex-col justify-center items-center w-10 h-10 gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+          aria-controls="mobile-menu"
+          className="md:hidden flex flex-col justify-center items-center w-10 h-10 gap-1.5 rounded"
         >
           <span
+            aria-hidden="true"
             className={`block w-6 h-0.5 bg-white transition-all duration-300 origin-center ${
               isOpen ? "rotate-45 translate-y-2" : ""
             }`}
           />
           <span
+            aria-hidden="true"
             className={`block w-6 h-0.5 bg-white transition-all duration-300 ${
               isOpen ? "opacity-0 scale-x-0" : ""
             }`}
           />
           <span
+            aria-hidden="true"
             className={`block w-6 h-0.5 bg-white transition-all duration-300 origin-center ${
               isOpen ? "-rotate-45 -translate-y-2" : ""
             }`}
@@ -94,7 +102,11 @@ export default function NavBar() {
       </div>
 
       {/* Mobile Menu Drawer */}
+      {/* While closed the drawer is hidden from assistive tech and unreachable by Tab (inert) */}
       <div
+        id="mobile-menu"
+        aria-hidden={!isOpen}
+        {...(!isOpen ? ({ inert: "" } as Record<string, string>) : {})}
         className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
           isOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
         }`}
@@ -104,6 +116,7 @@ export default function NavBar() {
             <Link
               key={href}
               href={href}
+              aria-current={pathname === href && !href.includes("#") ? "page" : undefined}
               className={`text-sm font-semibold tracking-wide hover:text-primary transition-colors py-1 ${
                 pathname === href && !href.includes("#")
                   ? "text-primary"
@@ -117,7 +130,7 @@ export default function NavBar() {
             href="/contact"
             className="mt-2 w-full text-center px-5 py-3 rounded-full border border-primary text-primary hover:bg-primary hover:text-dark transition-all font-bold text-sm"
           >
-            LET'S TALK
+            BOOK A FREE CALL
           </Link>
         </div>
       </div>

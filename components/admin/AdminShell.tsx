@@ -12,6 +12,7 @@ const NAV = [
     label: "Dashboard",
     icon: (
       <svg
+        aria-hidden="true"
         className="w-5 h-5"
         fill="none"
         stroke="currentColor"
@@ -31,6 +32,7 @@ const NAV = [
     label: "Leads",
     icon: (
       <svg
+        aria-hidden="true"
         className="w-5 h-5"
         fill="none"
         stroke="currentColor"
@@ -50,6 +52,7 @@ const NAV = [
     label: "Blog Posts",
     icon: (
       <svg
+        aria-hidden="true"
         className="w-5 h-5"
         fill="none"
         stroke="currentColor"
@@ -69,6 +72,7 @@ const NAV = [
     label: "Job Postings",
     icon: (
       <svg
+        aria-hidden="true"
         className="w-5 h-5"
         fill="none"
         stroke="currentColor"
@@ -88,6 +92,7 @@ const NAV = [
     label: "Certificates",
     icon: (
       <svg
+        aria-hidden="true"
         className="w-5 h-5"
         fill="none"
         stroke="currentColor"
@@ -107,6 +112,7 @@ const NAV = [
     label: "Applications",
     icon: (
       <svg
+        aria-hidden="true"
         className="w-5 h-5"
         fill="none"
         stroke="currentColor"
@@ -149,13 +155,13 @@ export default function AdminShell({
         >
           SETUP<span className="text-primary">GRAM</span>
         </Link>
-        <p className="text-xs text-gray-600 mt-1 tracking-widest uppercase">
+        <p className="text-xs text-gray-500 mt-1 tracking-widest uppercase">
           Admin Panel
         </p>
       </div>
 
       {/* Nav Links */}
-      <nav className="flex-1 px-3 py-6 space-y-1">
+      <nav aria-label="Admin" className="flex-1 px-3 py-6 space-y-1">
         {NAV.map(({ href, label, icon }) => {
           const active =
             pathname === href ||
@@ -165,6 +171,7 @@ export default function AdminShell({
               key={href}
               href={href}
               onClick={() => setSidebarOpen(false)}
+              aria-current={active ? "page" : undefined}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
                 active
                   ? "bg-primary/10 text-primary border border-primary/20"
@@ -183,9 +190,11 @@ export default function AdminShell({
         <Link
           href="/"
           target="_blank"
-          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-500 hover:text-gray-300 transition-colors"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-400 hover:text-white transition-colors"
         >
           <svg
+            aria-hidden="true"
             className="w-4 h-4"
             fill="none"
             stroke="currentColor"
@@ -199,13 +208,16 @@ export default function AdminShell({
             />
           </svg>
           View Website
+          <span className="sr-only"> (opens in a new tab)</span>
         </Link>
         <button
+          type="button"
           onClick={handleLogout}
           disabled={loggingOut}
           className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-red-400 hover:bg-red-400/10 transition-colors disabled:opacity-50"
         >
           <svg
+            aria-hidden="true"
             className="w-4 h-4"
             fill="none"
             stroke="currentColor"
@@ -226,9 +238,12 @@ export default function AdminShell({
 
   return (
     <div className="min-h-screen bg-dark flex">
-      {/* Glow orbs */}
-      <div className="fixed top-0 left-0 w-[30%] h-[30%] rounded-full bg-primary/10 blur-[100px] pointer-events-none z-0" />
-      <div className="fixed bottom-0 right-0 w-[30%] h-[30%] rounded-full bg-secondary/10 blur-[100px] pointer-events-none z-0" />
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[10001] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-primary focus:text-dark focus:font-bold"
+      >
+        Skip to main content
+      </a>
 
       {/* Desktop Sidebar */}
       <div className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 z-20 glass-panel border-r border-white/5">
@@ -239,7 +254,8 @@ export default function AdminShell({
       {sidebarOpen && (
         <div className="lg:hidden fixed inset-0 z-40 flex">
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/70"
+            aria-hidden="true"
             onClick={() => setSidebarOpen(false)}
           />
           <div className="relative z-50 w-64 glass-panel border-r border-white/5">
@@ -253,11 +269,14 @@ export default function AdminShell({
         {/* Top Bar */}
         <header className="sticky top-0 z-30 glass-panel border-b border-white/5 px-6 py-4 flex items-center justify-between">
           <button
+            type="button"
             onClick={() => setSidebarOpen(true)}
             className="lg:hidden text-gray-400 hover:text-white"
             aria-label="Open menu"
+            aria-expanded={sidebarOpen}
           >
             <svg
+              aria-hidden="true"
               className="w-6 h-6"
               fill="none"
               stroke="currentColor"
@@ -273,13 +292,13 @@ export default function AdminShell({
           </button>
           <div className="hidden lg:block" />
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-            <span className="text-xs text-gray-500">Admin</span>
+            <div aria-hidden="true" className="w-2 h-2 rounded-full bg-primary" />
+            <span className="text-xs text-gray-400">Admin</span>
           </div>
         </header>
 
         {/* Page */}
-        <main className="flex-1 p-6 lg:p-8">{children}</main>
+        <main id="main-content" tabIndex={-1} className="flex-1 p-6 lg:p-8 outline-none">{children}</main>
       </div>
     </div>
   );

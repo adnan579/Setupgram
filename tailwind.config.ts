@@ -17,7 +17,16 @@ const config: Config = {
       colors: {
         dark: "#050505",
         primary: "#00f0ff",   // Cyberpunk Cyan
-        secondary: "#b026ff", // AI Purple
+        secondary: "#b026ff", // AI Purple (fine for backgrounds and large text)
+        // Lighter purple for SMALL text: #b026ff is only 4.4:1 on the dark background
+        // (WCAG AA needs 4.5:1); this one is ~7.6:1.
+        "secondary-light": "#c77dff",
+        // Tailwind's default gray-500 (#6b7280) is only ~4.0:1 on the dark background,
+        // which fails WCAG AA for body text. This lighter value is ~6:1 everywhere,
+        // so every `text-gray-500` on the site passes without touching each usage.
+        gray: {
+          500: "#8b93a1",
+        },
       },
       animation: {
         "spin-slow": "spin 10s linear infinite",

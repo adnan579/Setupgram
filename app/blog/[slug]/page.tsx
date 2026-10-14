@@ -75,7 +75,7 @@ export default async function BlogPostPage({ params }: Props) {
       <section className="pt-32 pb-0 px-6">
         <div className="max-w-3xl mx-auto">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-xs text-gray-600 mb-8">
+          <div className="flex items-center gap-2 text-xs text-gray-500 mb-8">
             <Link href="/" className="hover:text-primary transition-colors">
               Home
             </Link>
@@ -94,7 +94,7 @@ export default async function BlogPostPage({ params }: Props) {
             <span className="text-xs font-bold tracking-widest uppercase text-primary bg-primary/10 border border-primary/20 px-3 py-1 rounded-full">
               {post.category}
             </span>
-            <span className="text-xs text-gray-600">
+            <span className="text-xs text-gray-500">
               {fmt(post.createdAt)} · {readTime(post.content)} min read
             </span>
           </div>
@@ -215,7 +215,7 @@ export default async function BlogPostPage({ params }: Props) {
                     <p className="text-white font-medium mt-1 group-hover:text-primary transition-colors line-clamp-2 text-sm">
                       {r.title}
                     </p>
-                    <p className="text-xs text-gray-600 mt-2">
+                    <p className="text-xs text-gray-500 mt-2">
                       {fmt(r.createdAt)}
                     </p>
                   </div>

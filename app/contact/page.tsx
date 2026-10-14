@@ -2,6 +2,7 @@
 
 import type { Metadata } from "next";
 import ContactForm from "../../components/ContactForm";
+import { siteConfig, whatsappHref } from "../../lib/siteConfig";
 
 export const metadata: Metadata = {
   title: "Contact Us",
@@ -12,17 +13,17 @@ export const metadata: Metadata = {
 const contactInfo = [
   {
     icon: (
-      <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg aria-hidden="true" className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
       </svg>
     ),
     label: "Email",
-    value: "info@setupgram.com",
-    href: "mailto:info@setupgram.com",
+    value: siteConfig.email,
+    href: `mailto:${siteConfig.email}`,
   },
   {
     icon: (
-      <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg aria-hidden="true" className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
@@ -32,7 +33,7 @@ const contactInfo = [
   },
   {
     icon: (
-      <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg aria-hidden="true" className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
@@ -87,7 +88,43 @@ export default function Contact() {
                     </div>
                   </div>
                 ))}
+                {siteConfig.phone && (
+                  <div className="flex items-center gap-4">
+                    <div aria-hidden="true" className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 text-primary text-lg">☎</div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Phone</p>
+                      <a href={siteConfig.phoneHref} className="text-gray-300 hover:text-primary transition-colors text-sm font-medium">
+                        {siteConfig.phone}
+                      </a>
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {whatsappHref() && (
+                <a
+                  href={whatsappHref("Hi SetupGram, I'd like to discuss a project.")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-6 flex items-center justify-center gap-2 w-full py-3 rounded-lg border border-[#25D366] text-[#25D366] font-bold text-sm hover:bg-[#25D366] hover:text-dark transition-colors"
+                >
+                  Chat with us on WhatsApp
+                  <span className="sr-only"> (opens in a new tab)</span>
+                </a>
+              )}
+
+              {siteConfig.social.length > 0 && (
+                <ul aria-label="Social media" className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+                  {siteConfig.social.map(({ label, href }) => (
+                    <li key={label}>
+                      <a href={href} target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-primary underline underline-offset-2">
+                        {label}
+                        <span className="sr-only"> (opens in a new tab)</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             {/* What to expect */}

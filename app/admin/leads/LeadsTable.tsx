@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import LeadStatusSelect from "./LeadStatusSelect";
 import { formatDateShort as fmt } from "../../../lib/utils";
+import { BUDGET_OPTIONS, TIMELINE_OPTIONS, optionLabel } from "../../../lib/leadOptions";
 
 type Lead = {
   _id: string;
@@ -11,6 +12,8 @@ type Lead = {
   email: string;
   phone?: string;
   service?: string;
+  budget?: string;
+  timeline?: string;
   message: string;
   status: "NEW" | "CONTACTED" | "CONVERTED" | "LOST";
   createdAt: string;
@@ -90,7 +93,7 @@ export default function LeadsTable({ leads: initial }: { leads: Lead[] }) {
       </div>
 
       {/* Count */}
-      <p className="text-xs text-gray-600">Showing {filtered.length} of {leads.length} leads</p>
+      <p className="text-xs text-gray-500">Showing {filtered.length} of {leads.length} leads</p>
 
       {/* Table */}
       {filtered.length === 0 ? (
@@ -113,7 +116,7 @@ export default function LeadsTable({ leads: initial }: { leads: Lead[] }) {
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-medium text-white text-sm">{lead.name}</p>
                     {lead.service && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-secondary/10 text-secondary border border-secondary/20">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-secondary/10 text-secondary-light border border-secondary/20">
                         {SERVICE_LABELS[lead.service] || lead.service}
                       </span>
                     )}
@@ -127,13 +130,14 @@ export default function LeadsTable({ leads: initial }: { leads: Lead[] }) {
                 </div>
 
                 {/* Date */}
-                <div className="flex-shrink-0 hidden md:block text-xs text-gray-600">{fmt(lead.createdAt)}</div>
+                <div className="flex-shrink-0 hidden md:block text-xs text-gray-500">{fmt(lead.createdAt)}</div>
 
                 {/* Expand */}
                 <button
                   onClick={() => setExpandedId(expandedId === lead._id ? null : lead._id)}
                   className="flex-shrink-0 text-gray-500 hover:text-primary transition-colors p-1"
                   aria-label="Toggle details"
+                  aria-expanded={expandedId === lead._id}
                 >
                   <svg className={`w-4 h-4 transition-transform ${expandedId === lead._id ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -144,7 +148,7 @@ export default function LeadsTable({ leads: initial }: { leads: Lead[] }) {
                 <button
                   onClick={() => handleDelete(lead._id)}
                   disabled={deletingId === lead._id}
-                  className="flex-shrink-0 text-gray-600 hover:text-red-400 transition-colors p-1 disabled:opacity-40"
+                  className="flex-shrink-0 text-gray-500 hover:text-red-400 transition-colors p-1 disabled:opacity-40"
                   aria-label="Delete lead"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -159,6 +163,18 @@ export default function LeadsTable({ leads: initial }: { leads: Lead[] }) {
                   <div className="sm:hidden mb-3">
                     <LeadStatusSelect id={lead._id} initial={lead.status} />
                   </div>
+                  {(lead.budget || lead.timeline) && (
+                    <dl className="grid grid-cols-2 gap-4 mb-4 text-sm">
+                      <div>
+                        <dt className="text-xs text-gray-500 uppercase tracking-wide mb-1 font-semibold">Budget</dt>
+                        <dd className="text-gray-300">{optionLabel(BUDGET_OPTIONS, lead.budget) || "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-gray-500 uppercase tracking-wide mb-1 font-semibold">Timeline</dt>
+                        <dd className="text-gray-300">{optionLabel(TIMELINE_OPTIONS, lead.timeline) || "—"}</dd>
+                      </div>
+                    </dl>
+                  )}
                   <p className="text-xs text-gray-500 uppercase tracking-wide mb-2 font-semibold">Message</p>
                   <p className="text-sm text-gray-300 leading-relaxed bg-white/[0.03] rounded-lg p-4 border border-white/5">
                     {lead.message}

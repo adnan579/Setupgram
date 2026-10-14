@@ -82,7 +82,7 @@ export default async function AdminDashboard() {
     { label: "Total Leads", value: total, sub: "All time", color: "text-primary", icon: "👥" },
     { label: "Converted", value: statusCount.CONVERTED || 0, sub: `${total ? Math.round(((statusCount.CONVERTED || 0) / total) * 100) : 0}% conversion`, color: "text-green-400", icon: "✅" },
     { label: "Active Pipeline", value: (statusCount.NEW || 0) + (statusCount.CONTACTED || 0), sub: "New + Contacted", color: "text-yellow-400", icon: "🔥" },
-    { label: "Published Posts", value: publishedPosts, sub: `${draftPosts} drafts`, color: "text-secondary", icon: "📝" },
+    { label: "Published Posts", value: publishedPosts, sub: `${draftPosts} drafts`, color: "text-secondary-light", icon: "📝" },
   ];
 
   const pipeline = [
@@ -127,7 +127,7 @@ export default async function AdminDashboard() {
                 <div key={key}>
                   <div className="flex justify-between text-sm mb-1">
                     <span className={`font-medium ${textColor}`}>{label}</span>
-                    <span className="text-gray-400">{count} <span className="text-gray-600">({pct}%)</span></span>
+                    <span className="text-gray-400">{count} <span className="text-gray-500">({pct}%)</span></span>
                   </div>
                   <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                     <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${pct}%` }} />
@@ -166,7 +166,7 @@ export default async function AdminDashboard() {
                     <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${STATUS_COLORS[lead.status] || "text-gray-400"}`}>
                       {lead.status}
                     </span>
-                    <span className="text-xs text-gray-600 hidden sm:block">{fmt(lead.createdAt)}</span>
+                    <span className="text-xs text-gray-500 hidden sm:block">{fmt(lead.createdAt)}</span>
                   </div>
                 </div>
               ))}
@@ -198,7 +198,7 @@ export default async function AdminDashboard() {
                   </span>
                 </div>
                 <p className="text-sm font-medium text-white group-hover:text-primary transition-colors line-clamp-2">{post.title}</p>
-                <p className="text-xs text-gray-600 mt-2">{fmt(post.createdAt)}</p>
+                <p className="text-xs text-gray-500 mt-2">{fmt(post.createdAt)}</p>
               </Link>
             ))}
           </div>
