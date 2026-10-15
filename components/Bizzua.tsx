@@ -504,6 +504,7 @@ export default function Bizzua() {
                 ref={inputRef}
                 type="text"
                 aria-label="Message to Bizzua"
+                maxLength={1000}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={
