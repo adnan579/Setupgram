@@ -6,8 +6,9 @@ import { revalidateJobs } from "../../../../../lib/revalidate";
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
   try {
     const body = await request.json();
     const {
@@ -36,7 +37,7 @@ export async function PUT(
     if (slug) {
       const existing = await db
         .collection("jobs")
-        .findOne({ slug, _id: { $ne: new ObjectId(params.id) } });
+        .findOne({ slug, _id: { $ne: new ObjectId(id) } });
       if (existing) {
         return NextResponse.json(
           { success: false, message: "A job with this slug already exists." },
@@ -71,7 +72,7 @@ export async function PUT(
 
     const result = await db
       .collection("jobs")
-      .updateOne({ _id: new ObjectId(params.id) }, { $set: updateFields });
+      .updateOne({ _id: new ObjectId(id) }, { $set: updateFields });
     revalidateJobs();
     if (result.matchedCount === 0) {
       return NextResponse.json(
@@ -90,11 +91,12 @@ export async function PUT(
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
   try {
     const db = await getDb();
-    await db.collection("jobs").deleteOne({ _id: new ObjectId(params.id) });
+    await db.collection("jobs").deleteOne({ _id: new ObjectId(id) });
     revalidateJobs();
     return NextResponse.json({ success: true });
   } catch {

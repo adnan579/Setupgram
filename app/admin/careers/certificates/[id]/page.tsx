@@ -11,14 +11,15 @@ export const dynamic = "force-dynamic";
 export default async function EditCertificatePage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   let cert;
   try {
     const db = await getDb();
     cert = await db
       .collection("certificates")
-      .findOne({ _id: new ObjectId(params.id) });
+      .findOne({ _id: new ObjectId(id) });
   } catch {
     notFound();
   }

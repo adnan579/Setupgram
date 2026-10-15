@@ -341,12 +341,12 @@ export default function Bizzua() {
       {/* ── Chat Window ── */}
       {/* When closed the window is only faded out visually, so it must ALSO be removed from the
           tab order and the accessibility tree (inert + aria-hidden), otherwise keyboard users
-          tab into invisible buttons. React 18 has no typed `inert` prop, hence the spread. */}
+          tab into invisible buttons. React 19 supports `inert` as a boolean prop. */}
       <div
         role="dialog"
         aria-label="Bizzua chat assistant"
         aria-hidden={!isOpen}
-        {...(!isOpen ? ({ inert: "" } as Record<string, string>) : {})}
+        inert={!isOpen}
         className={`fixed bottom-24 right-5 sm:right-6 z-[9999] transition-all duration-300 ease-out ${
           isOpen
             ? "opacity-100 translate-y-0 scale-100 pointer-events-auto"

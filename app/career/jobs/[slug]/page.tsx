@@ -9,7 +9,7 @@ import { formatDateLong as fmt } from "../../../../lib/utils";
 import { DEFAULT_OG_IMAGE } from "../../../../lib/seo";
 
 interface Props {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 // Cached and refreshed at most every 60s; admin saves refresh it instantly (lib/revalidate.ts)
@@ -28,7 +28,8 @@ const getJob = cache(async (slug: string) => {
 });
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const job = await getJob(params.slug);
+  const { slug } = await params;
+  const job = await getJob(slug);
   if (!job) return { title: "Position Not Found" };
   return {
     title: job.metaTitle || `${job.title} | Careers`,
@@ -46,7 +47,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function JobDetailPage({ params }: Props) {
-  const job = await getJob(params.slug);
+  const { slug } = await params;
+  const job = await getJob(slug);
   if (!job) notFound();
 
   const jsonLd = {

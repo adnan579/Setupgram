@@ -12,12 +12,13 @@ export const dynamic = "force-dynamic";
 export default async function EditBlogPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   let post;
   try {
     const db = await getDb();
-    post = await db.collection("blogs").findOne({ _id: new ObjectId(params.id) });
+    post = await db.collection("blogs").findOne({ _id: new ObjectId(id) });
   } catch {
     notFound();
   }

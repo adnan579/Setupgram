@@ -113,7 +113,7 @@ export default function NavBar() {
       <div
         id="mobile-menu"
         aria-hidden={!isOpen}
-        {...(!isOpen ? ({ inert: "" } as Record<string, string>) : {})}
+        inert={!isOpen}
         className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
           isOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
         }`}
