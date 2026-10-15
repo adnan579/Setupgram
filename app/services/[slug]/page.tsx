@@ -9,16 +9,16 @@ import { siteConfig } from "../../../lib/siteConfig";
 import JsonLd from "../../../components/JsonLd";
 import ServiceCta from "../../../components/ServiceCta";
 
-type Props = { params: { slug: string } };
+type Props = { params: Promise<{ slug: string }> };
 
-// Static content: every service page is generated at build time. Unknown slugs 404.
-export const dynamicParams = false;
+// Known slugs are generated at build time; anything else falls through to notFound() below (404).
 export function generateStaticParams() {
   return services.map((s) => ({ slug: s.slug }));
 }
 
-export function generateMetadata({ params }: Props): Metadata {
-  const s = getService(params.slug);
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const s = getService(slug);
   if (!s) return { title: "Service Not Found" };
   return {
     title: s.metaTitle,
@@ -29,8 +29,9 @@ export function generateMetadata({ params }: Props): Metadata {
   };
 }
 
-export default function ServicePage({ params }: Props) {
-  const s = getService(params.slug);
+export default async function ServicePage({ params }: Props) {
+  const { slug } = await params;
+  const s = getService(slug);
   if (!s) notFound();
   const related = s.related.map((r) => getService(r)).filter((x): x is NonNullable<typeof x> => Boolean(x));
 

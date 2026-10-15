@@ -7,8 +7,9 @@ import { revalidateBlogs } from "../../../../../lib/revalidate";
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const body = await request.json();
     const {
@@ -21,7 +22,7 @@ export async function PUT(
     if (slug) {
       const existing = await db.collection("blogs").findOne({
         slug,
-        _id: { $ne: new ObjectId(params.id) },
+        _id: { $ne: new ObjectId(id) },
       });
       if (existing) {
         return NextResponse.json(
@@ -47,7 +48,7 @@ export async function PUT(
     }
 
     const result = await db.collection("blogs").updateOne(
-      { _id: new ObjectId(params.id) },
+      { _id: new ObjectId(id) },
       { $set: updateFields }
     );
     revalidateBlogs();
@@ -64,11 +65,12 @@ export async function PUT(
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const db = await getDb();
-    await db.collection("blogs").deleteOne({ _id: new ObjectId(params.id) });
+    await db.collection("blogs").deleteOne({ _id: new ObjectId(id) });
     revalidateBlogs();
     return NextResponse.json({ success: true });
   } catch {

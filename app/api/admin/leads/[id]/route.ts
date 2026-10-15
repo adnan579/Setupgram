@@ -6,8 +6,9 @@ import { getDb } from "../../../../../lib/mongodb";
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const { status } = await request.json();
     const validStatuses = ["NEW", "CONTACTED", "CONVERTED", "LOST"];
@@ -18,7 +19,7 @@ export async function PATCH(
 
     const db = await getDb();
     const result = await db.collection("leads").updateOne(
-      { _id: new ObjectId(params.id) },
+      { _id: new ObjectId(id) },
       { $set: { status } }
     );
 
@@ -34,11 +35,12 @@ export async function PATCH(
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const db = await getDb();
-    await db.collection("leads").deleteOne({ _id: new ObjectId(params.id) });
+    await db.collection("leads").deleteOne({ _id: new ObjectId(id) });
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ success: false, message: "Server error." }, { status: 500 });

@@ -10,15 +10,16 @@ import { breadcrumbJsonLd, DEFAULT_OG_IMAGE } from "../../../lib/seo";
 import JsonLd from "../../../components/JsonLd";
 import ServiceCta from "../../../components/ServiceCta";
 
-type Props = { params: { slug: string } };
+type Props = { params: Promise<{ slug: string }> };
 
-export const dynamicParams = false;
+// Known slugs are generated at build time; anything else falls through to notFound() below (404).
 export function generateStaticParams() {
   return caseStudies.map((c) => ({ slug: c.slug }));
 }
 
-export function generateMetadata({ params }: Props): Metadata {
-  const c = getCaseStudy(params.slug);
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const c = getCaseStudy(slug);
   if (!c) return { title: "Case Study Not Found" };
   return {
     title: `${c.title} | Case Study`,
@@ -34,8 +35,9 @@ export function generateMetadata({ params }: Props): Metadata {
   };
 }
 
-export default function CaseStudyPage({ params }: Props) {
-  const c = getCaseStudy(params.slug);
+export default async function CaseStudyPage({ params }: Props) {
+  const { slug } = await params;
+  const c = getCaseStudy(slug);
   if (!c) notFound();
 
   return (

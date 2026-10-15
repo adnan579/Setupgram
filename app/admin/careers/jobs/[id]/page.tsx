@@ -11,12 +11,13 @@ export const dynamic = "force-dynamic";
 export default async function EditJobPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   let job;
   try {
     const db = await getDb();
-    job = await db.collection("jobs").findOne({ _id: new ObjectId(params.id) });
+    job = await db.collection("jobs").findOne({ _id: new ObjectId(id) });
   } catch {
     notFound();
   }

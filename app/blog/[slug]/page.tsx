@@ -14,7 +14,7 @@ import { siteConfig } from "../../../lib/siteConfig";
 import JsonLd from "../../../components/JsonLd";
 
 interface Props {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 // Cached and refreshed at most every 60s; admin saves refresh it instantly (lib/revalidate.ts)
@@ -33,7 +33,8 @@ const getPost = cache(async (slug: string) => {
 });
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const post = await getPost(params.slug);
+  const { slug } = await params;
+  const post = await getPost(slug);
   if (!post) return { title: "Post Not Found" };
   return {
     title: post.metaTitle || post.title,
@@ -64,11 +65,12 @@ function readTime(content: string) {
 }
 
 export default async function BlogPostPage({ params }: Props) {
-  const post = await getPost(params.slug);
+  const { slug } = await params;
+  const post = await getPost(slug);
   if (!post) notFound();
 
   // Same-category posts first, newest others only to fill the list
-  const related = await getRelatedPosts(params.slug, post.category, 2);
+  const related = await getRelatedPosts(slug, post.category, 2);
   const categorySlug = slugify(post.category || "");
 
   const articleJsonLd = {

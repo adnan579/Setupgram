@@ -5,8 +5,9 @@ import { getDb } from "../../../../../lib/mongodb";
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
   try {
     const { status } = await request.json();
     const validStatuses = [
@@ -26,7 +27,7 @@ export async function PATCH(
     const db = await getDb();
     const result = await db
       .collection("applications")
-      .updateOne({ _id: new ObjectId(params.id) }, { $set: { status } });
+      .updateOne({ _id: new ObjectId(id) }, { $set: { status } });
     if (result.matchedCount === 0) {
       return NextResponse.json(
         { success: false, message: "Application not found." },
@@ -44,13 +45,14 @@ export async function PATCH(
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
   try {
     const db = await getDb();
     await db
       .collection("applications")
-      .deleteOne({ _id: new ObjectId(params.id) });
+      .deleteOne({ _id: new ObjectId(id) });
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json(

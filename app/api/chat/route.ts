@@ -1,15 +1,66 @@
 /** @format */
 
 import { NextResponse } from "next/server";
+import { checkRateLimit, getClientIp } from "../../../lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
 const GEMINI_MODEL = "gemini-2.5-flash";
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
-// Simple in-memory rate limiter — 1 request per 7 seconds per IP
-const rateLimitMap = new Map<string, number>();
-const RATE_LIMIT_MS = 7000;
+// ── Abuse / cost limits (Gemini bills per token) ─────────────────────────────
+const MAX_BODY_BYTES = 16_000; // whole request body
+const MAX_MESSAGES = 20; // items accepted in `messages` (the widget sends at most 6)
+const CONTEXT_TURNS = 6; // turns actually forwarded to Gemini
+const MAX_USER_CHARS = 1000; // one user message
+const MAX_ASSISTANT_CHARS = 2000; // an earlier bot reply echoed back as context
+
+// Database-backed limits (shared by every serverless instance, see lib/rateLimit.ts)
+const LIMIT_PER_IP_SHORT = { max: 20, windowMs: 10 * 60 * 1000 }; // 20 messages / 10 min
+const LIMIT_PER_IP_DAY = { max: 100, windowMs: 24 * 60 * 60 * 1000 }; // 100 messages / day
+const LIMIT_GLOBAL_DAY = { max: 3000, windowMs: 24 * 60 * 60 * 1000 }; // whole site: circuit breaker
+
+// Used ONLY if the database is unreachable: per-instance, 1 request per 7 seconds per IP.
+// Better than failing open with no limit at all.
+const fallbackLimitMap = new Map<string, number>();
+const FALLBACK_LIMIT_MS = 7000;
+
+type ChatTurn = { role: "user" | "assistant"; content: string };
+
+/** Keeps only well-formed { role, content } turns; anything else is dropped instead of crashing. */
+function sanitizeTurns(raw: unknown[]): ChatTurn[] {
+  const turns: ChatTurn[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const { role, content } = item as { role?: unknown; content?: unknown };
+    if ((role !== "user" && role !== "assistant") || typeof content !== "string") continue;
+    const text = content.trim();
+    if (text) turns.push({ role, content: text });
+  }
+  return turns;
+}
+
+function fallbackRateLimited(ip: string): number {
+  const now = Date.now();
+  const last = fallbackLimitMap.get(ip) ?? 0;
+  if (now - last < FALLBACK_LIMIT_MS) {
+    return Math.ceil((FALLBACK_LIMIT_MS - (now - last)) / 1000);
+  }
+  fallbackLimitMap.set(ip, now);
+  if (fallbackLimitMap.size > 100) {
+    const cutoff = now - 60000;
+    Array.from(fallbackLimitMap.keys()).forEach((key) => {
+      if ((fallbackLimitMap.get(key) ?? 0) < cutoff) fallbackLimitMap.delete(key);
+    });
+  }
+  return 0;
+}
+
+const tooManyRequests = (reply: string, retryAfterSeconds: number) =>
+  NextResponse.json(
+    { reply },
+    { status: 429, headers: { "Retry-After": String(Math.max(1, retryAfterSeconds)) } },
+  );
 
 const SYSTEM_INSTRUCTION = `You are Bizzua, the friendly and knowledgeable AI assistant for SetupGram Infotech Solutions — an AI-driven digital agency and strategic consulting firm based in India that serves clients worldwide.
 
@@ -49,21 +100,64 @@ RULES:
 
 export async function POST(request: Request) {
   try {
-    // ── 1. Parse body ────────────────────────────────────────────────────────
-    let body: { messages?: { role: string; content: string }[] };
-    try {
-      body = await request.json();
-    } catch {
+    // ── 1. Parse and validate body ───────────────────────────────────────────
+    // Reject oversized bodies before parsing them.
+    const declaredLength = Number(request.headers.get("content-length") ?? 0);
+    if (declaredLength > MAX_BODY_BYTES) {
       return NextResponse.json(
-        { reply: "Invalid request. Please try again." },
+        { reply: "That message is too large. Please send something shorter." },
+        { status: 413 },
+      );
+    }
+
+    let rawText: string;
+    try {
+      rawText = await request.text();
+    } catch {
+      return NextResponse.json({ reply: "Invalid request. Please try again." }, { status: 400 });
+    }
+    if (rawText.length > MAX_BODY_BYTES) {
+      return NextResponse.json(
+        { reply: "That message is too large. Please send something shorter." },
+        { status: 413 },
+      );
+    }
+
+    let body: { messages?: unknown };
+    try {
+      body = JSON.parse(rawText);
+    } catch {
+      return NextResponse.json({ reply: "Invalid request. Please try again." }, { status: 400 });
+    }
+
+    const rawMessages = body && typeof body === "object" ? body.messages : undefined;
+    if (!Array.isArray(rawMessages) || rawMessages.length === 0) {
+      return NextResponse.json(
+        { reply: "No messages received. Please try again." },
+        { status: 400 },
+      );
+    }
+    if (rawMessages.length > MAX_MESSAGES) {
+      return NextResponse.json(
+        { reply: "Too many messages in one request. Please start a new chat." },
         { status: 400 },
       );
     }
 
-    const messages = body.messages;
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    // Non-string / malformed entries are dropped here instead of crashing later.
+    const turns = sanitizeTurns(rawMessages);
+    const lastTurn = turns[turns.length - 1];
+    if (!lastTurn || lastTurn.role !== "user") {
       return NextResponse.json(
-        { reply: "No messages received. Please try again." },
+        { reply: "No message received. Please type your question and try again." },
+        { status: 400 },
+      );
+    }
+    if (lastTurn.content.length > MAX_USER_CHARS) {
+      return NextResponse.json(
+        {
+          reply: `That message is too long — please keep it under ${MAX_USER_CHARS} characters.`,
+        },
         { status: 400 },
       );
     }
@@ -82,41 +176,63 @@ export async function POST(request: Request) {
       });
     }
 
-    // ── 3. Per-IP rate limiting ──────────────────────────────────────────────
-    const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      request.headers.get("x-real-ip") ||
-      "unknown";
-
-    const now = Date.now();
-    const lastRequest = rateLimitMap.get(ip) ?? 0;
-
-    if (now - lastRequest < RATE_LIMIT_MS) {
-      const waitSec = Math.ceil((RATE_LIMIT_MS - (now - lastRequest)) / 1000);
-      return NextResponse.json({
-        reply: `Please wait ${waitSec} second${waitSec > 1 ? "s" : ""} before sending another message 😊`,
-      });
+    // ── 3. Rate limiting (database-backed, shared across all instances) ──────
+    const ip = getClientIp(request);
+    try {
+      const short = await checkRateLimit(
+        `chat:${ip}`,
+        LIMIT_PER_IP_SHORT.max,
+        LIMIT_PER_IP_SHORT.windowMs,
+      );
+      if (!short.allowed) {
+        return tooManyRequests(
+          "You're sending messages very quickly! 😊 Please wait a few minutes, or email us at info@setupgram.com",
+          short.retryAfterSeconds,
+        );
+      }
+      const day = await checkRateLimit(
+        `chat-day:${ip}`,
+        LIMIT_PER_IP_DAY.max,
+        LIMIT_PER_IP_DAY.windowMs,
+      );
+      if (!day.allowed) {
+        return tooManyRequests(
+          "You've reached today's chat limit. Please email us at info@setupgram.com and we'll help you directly!",
+          day.retryAfterSeconds,
+        );
+      }
+      const global = await checkRateLimit(
+        "chat-global",
+        LIMIT_GLOBAL_DAY.max,
+        LIMIT_GLOBAL_DAY.windowMs,
+      );
+      if (!global.allowed) {
+        console.error("Bizzua global daily message cap reached — Gemini calls paused.");
+        return tooManyRequests(
+          "Bizzua is taking a break for today. Please email us at info@setupgram.com and we'll reply soon! 🙏",
+          global.retryAfterSeconds,
+        );
+      }
+    } catch (error) {
+      // Database unreachable: fall back to a per-instance limit rather than no limit.
+      console.error("Chat rate limiter unavailable, using in-memory fallback:", error);
+      const wait = fallbackRateLimited(ip);
+      if (wait > 0) {
+        return tooManyRequests(
+          `Please wait ${wait} second${wait > 1 ? "s" : ""} before sending another message 😊`,
+          wait,
+        );
+      }
     }
-    rateLimitMap.set(ip, now);
 
-    // Clean up old entries — FIX: use Array.from() to avoid ES2015 iterator issue
-    if (rateLimitMap.size > 100) {
-      const cutoff = now - 60000;
-      Array.from(rateLimitMap.keys()).forEach((key) => {
-        if ((rateLimitMap.get(key) ?? 0) < cutoff) {
-          rateLimitMap.delete(key);
-        }
-      });
-    }
-
-    // ── 4. Build Gemini contents — trim to last 6 turns ─────────────────────
-    const trimmedMessages = messages
-      .filter((m) => m.content && m.content.trim() !== "")
-      .slice(-6);
-
-    const rawContents = trimmedMessages.map((m) => ({
+    // ── 4. Build Gemini contents — last few turns, each length-capped ────────
+    const rawContents = turns.slice(-CONTEXT_TURNS).map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content.trim() }],
+      parts: [
+        {
+          text: m.content.slice(0, m.role === "assistant" ? MAX_ASSISTANT_CHARS : MAX_USER_CHARS),
+        },
+      ],
     }));
 
     // Merge consecutive same-role turns (Gemini strict requirement)
@@ -161,10 +277,12 @@ export async function POST(request: Request) {
         await new Promise((r) => setTimeout(r, attempt * 2000));
       }
 
-      res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+      res = await fetch(GEMINI_API_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        // Key goes in a header so it can never end up in logged URLs
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
         body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(12_000),
       });
 
       lastStatus = res.status;

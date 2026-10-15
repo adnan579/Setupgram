@@ -9,7 +9,7 @@ import ShareButton from "./ShareButton";
 import { formatDateLong as fmt } from "../../../../lib/utils";
 
 interface Props {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -38,7 +38,8 @@ const getCertificate = cache(async (slug: string) => {
 });
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const cert = await getCertificate(params.slug);
+  const { slug } = await params;
+  const cert = await getCertificate(slug);
   if (!cert) return { title: "Certificate Not Found" };
 
   const title = `${cert.candidateName} — ${cert.program} | SetupGram Certificate`;
@@ -70,7 +71,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function VerifyCertificatePage({ params }: Props) {
-  const cert = await getCertificate(params.slug);
+  const { slug } = await params;
+  const cert = await getCertificate(slug);
   if (!cert) notFound();
 
   const isValid = cert.verificationStatus === "VALID";

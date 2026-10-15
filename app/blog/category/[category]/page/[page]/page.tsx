@@ -8,16 +8,18 @@ export async function generateStaticParams() {
   return [];
 }
 
-type Params = { category: string; page: string };
+type Params = Promise<{ category: string; page: string }>;
 
 export async function generateMetadata({ params }: { params: Params }) {
-  const page = parsePage(params.page);
+  const { category, page: rawPage } = await params;
+  const page = parsePage(rawPage);
   if (!page) return { title: "Page Not Found" };
-  return blogIndexMetadata(page, params.category);
+  return blogIndexMetadata(page, category);
 }
 
-export default function BlogCategoryPageN({ params }: { params: Params }) {
-  const page = parsePage(params.page);
+export default async function BlogCategoryPageN({ params }: { params: Params }) {
+  const { category, page: rawPage } = await params;
+  const page = parsePage(rawPage);
   if (!page) notFound();
-  return <BlogIndex page={page} categorySlug={params.category} />;
+  return <BlogIndex page={page} categorySlug={category} />;
 }
